@@ -268,7 +268,8 @@ class ResNet1D(nn.Module):
         # self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
-        x = x[:,1,:].unsqueeze(1)
+        # x = x[:,1,:].unsqueeze(1)        
+        x = x.unsqueeze(0)
         out = x
 
         # first conv

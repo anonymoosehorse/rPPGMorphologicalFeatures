@@ -67,15 +67,9 @@ class TransformerModel(nn.Module):
             output Tensor of shape [seq_len, batch_size, ntoken]
         """
         # Remove time axis
-        x = x[:,1,:] # Shape(batch_size, seq_len)
+        # x = x[:,1,:] # Shape(batch_size, seq_len)
 
-        # Normalize the input
-        if config.DATASET == "vipl":
-            dif = config.VIPL_MAX - config.VIPL_MIN
-            x = (x - config.VIPL_MIN) / dif # Change to range 0-1
-        elif config.DATASET == "vicar":
-            dif = config.VICAR_MAX - config.VICAR_MIN
-            x = (x - config.VICAR_MIN) / dif  # * self.ntoken
+        # * self.ntoken
         # Quantize the input and add positional encoding as extra dimension
         #x = torch.floor(x * self.ntoken)  # Change to range 0-nToken
         #x = x / self.ntoken  # Change to quantized range 0-1

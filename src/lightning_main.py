@@ -1,3 +1,4 @@
+import comet_ml
 import pytorch_lightning as pl
 import torchmetrics
 import torch.nn as nn
@@ -34,8 +35,10 @@ class Runner(pl.LightningModule):
         return optimizer
 
     def _step(self, batch):        
-        inputs = torch.stack(tuple(data['data'] for data in batch))
-        targets = torch.stack(tuple(data['target'] for data in batch))
+        # inputs = torch.stack(tuple(data['data'] for data in batch))
+        # targets = torch.stack(tuple(data['target'] for data in batch))
+        inputs = batch['data']
+        targets = batch['target']
         outputs = self.model(inputs)
         loss = self.loss_fn(outputs, targets.view(outputs.shape))
         return loss, targets, outputs
@@ -62,17 +65,17 @@ class Runner(pl.LightningModule):
         self.test_mae(y_hat, y.view(y_hat.shape))
 
         # Log test loss
-        self.log("test/loss", loss)
+        self.log("test/loss_step", loss)
         return loss
 
     def on_train_epoch_end(self):
         # Log the epoch-level training accuracy
-        self.log('train/acc', self.train_mae.compute())
+        self.log('train/MAE', self.train_mae.compute())
         self.train_mae.reset()
 
     def on_validation_epoch_end(self):
         # Log the epoch-level validation accuracy
-        self.log('val/acc', self.val_mae.compute())
+        self.log('val/MAE', self.val_mae.compute())
         self.val_mae.reset()
 
 if __name__ == "__main__":
@@ -91,18 +94,6 @@ if __name__ == "__main__":
     pl.seed_everything(cfg.seed, workers=True)
 
     comet_logger = CometLogger(**cfg.comet) 
-        
-
-    # comet_logger.log_hyperparams(
-    #     {
-    #         "batch_size": config.BATCH_SIZE,
-    #         "lr": config.lr,
-    #         "DATASET": config.DATASET,
-    #         "hr_path": config.TARGET_PATH,
-    #         "data_path": config.TRAINSET,
-    #         "model": config.MODEL
-    #     }
-    # )
 
     comet_logger.log_hyperparams(OmegaConf.to_container(cfg,resolve=True))
 
@@ -116,7 +107,7 @@ if __name__ == "__main__":
         accelerator='auto'
     )
     
-    train_loader,test_loader,val_loader = get_dataloaders(config,device)
+    train_loader,test_loader,val_loader = get_dataloaders(cfg,device)
     
     trainer.fit(runner, train_loader, test_loader)
 

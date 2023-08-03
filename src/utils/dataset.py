@@ -6,6 +6,7 @@ from PIL import ImageFile
 from torch.utils.data import Dataset
 
 import config
+from constants import DatasetStats
 from utils.file_io import read_target_data, get_hr_data, get_hr_data_stmaps, get_hr_data_filtered
 import torch.nn.functional as F
 import cv2
@@ -50,7 +51,7 @@ class DataLoaderCWTNet(Dataset):
 
 
 class DataLoader1D(Dataset):
-    def __init__(self, data_files, target_signal_path,device):
+    def __init__(self, data_files, target_signal_path,device,cfg):
         self.data_files = data_files
         self.data_path = self.data_files[0].parent
         #self.transform = transforms.Compose([
@@ -60,6 +61,8 @@ class DataLoader1D(Dataset):
         #])
         self.target_path = target_signal_path
         self.device = device
+        self.cfg = cfg
+        self.dataset_stats = DatasetStats(cfg)
 
     def __len__(self):
         return len(self.data_files)
@@ -72,18 +75,28 @@ class DataLoader1D(Dataset):
 
         target_hr = get_hr_data_filtered(file_name, self.target_path)
 
+        # Normalize the input
+        if self.cfg.model.name == 'tranformer1d':
+            if self.cfg.dataset.name == "vipl":
+                dif = self.dataset_stats.VIPL_MAX - self.dataset_stats.VIPL_MIN
+                data[1,:] = (data[1,:] - self.dataset_stats.VIPL_MIN) / dif # Change to range 0-1
+            elif self.cfg.dataset.name  == "vicar":
+                dif = self.dataset_stats.VICAR_MAX - self.dataset_stats.VICAR_MIN
+                data[1,:] = (data[1,:] - self.dataset_stats.VICAR_MIN) / dif
+
         return {
-            "data": torch.tensor(data, dtype=torch.float).to(self.device),
-            "target": torch.tensor(target_hr, dtype=torch.float).to(self.device)
+            "data": data[1,:].float().to(self.device),
+            "target": torch.tensor(target_hr).float().to(self.device)
         }
 
 
 class DataLoaderSTMaps(Dataset):
-    def __init__(self, data_files, target_signal_path,device):
+    def __init__(self, data_files, target_signal_path,device,cfg):
         self.data_files = data_files
         self.data_path = self.data_files[0].parent
         self.target_path = target_signal_path
         self.device = device
+        self.cfg = cfg
 
     def __len__(self):
         return len(self.data_files)
@@ -91,7 +104,7 @@ class DataLoaderSTMaps(Dataset):
     def __getitem__(self, index):
         file_name = self.data_files[index].stem
 
-        if config.USE_YUV == True:            
+        if self.cfg.dataset.use_yuv == True:            
             img_yuv = np.load(self.data_path + file_name + ".npy")
             img_yuv = cv2.cvtColor(np.float32(img_yuv * 255), cv2.COLOR_BGR2YUV)
             img_yuv = torch.tensor(img_yuv, dtype=torch.float)
@@ -103,11 +116,11 @@ class DataLoaderSTMaps(Dataset):
             img_yuv = torch.tensor(img_yuv, dtype=torch.float)
             img_yuv = torch.unsqueeze(img_yuv, 2)
 
-        if config.MODEL == 'transformer2d':
+        if self.cfg.model.name == 'transformer2d':
             img_yuv = torch.permute(img_yuv, (2, 0, 1))
             img_yuv = F.interpolate(img_yuv, size=224, mode='linear')
             img_yuv = torch.permute(img_yuv, (2, 1, 0))
-            if config.DATASET == 'vipl':
+            if self.cfg.dataset.name == 'vipl':
                 img_yuv = img_yuv[:, 8:-8, :]
             else:
                 img_yuv = img_yuv[:, 20:-20, :]
