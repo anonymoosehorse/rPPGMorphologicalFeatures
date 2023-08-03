@@ -1,17 +1,14 @@
 import torch
 import sys
+from pathlib import Path
 
 haarcascade_url = "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_frontalface_alt2.xml"
 eye_cascade_url = "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_eye.xml"
 
-# HOME_DIR = "C:/Users/ruben/Documents/thesis/src/"
-HOME_DIR = r"D:\Projects\Waveform\AlternativeRubenCode\thesis-RhythmNet\OutputFolder\data"
-CHECKPOINT_PATH = HOME_DIR + "/../thesis/checkpoint/"
-# CHECKPOINT_PATH = "/tudelft.net/staff-umbrella/StudentsCVlab/rsangers/thesis/plots/vicar/1d resnet1d gt/pwa/2022-06-13 20:25:20.876393/running_model_0.007498822174966335.pt"
-# CHECKPOINT_PATH = "/tudelft.net/staff-umbrella/StudentsCVlab/rsangers/thesis/plots/vipl/1d resnet1d gt/pwa/2022-06-13 19:48:54.775641/running_model_0.014637022744864225.pt"
-# CHECKPOINT_PATH = "/tudelft.net/staff-umbrella/StudentsCVlab/rsangers/thesis/plots/vipl/1d resnet1d gt/rt/2022-06-13 19:47:02.124145/running_model_20.38557783762614.pt"
-# CHECKPOINT_PATH = "/tudelft.net/staff-umbrella/StudentsCVlab/rsangers/thesis/plots/vicar/1d resnet1d gt/rt/2022-06-13 20:24:48.262238/running_model_7.972048799196879.pt"
-PLOT_PATH = HOME_DIR + "/../thesis/plots/"
+
+CHECKPOINT_PATH = HOME_DIR.parent / Path("thesis/checkpoint/")
+
+PLOT_PATH = HOME_DIR.parent / Path("thesis/plots/")
 if len(sys.argv) == 8:
     DATASET = sys.argv[1]
     MODEL = sys.argv[2]
@@ -39,21 +36,10 @@ else:
     VIPL_MIN = -0.3398
     VICAR_MAX = 0.04123
     VICAR_MIN = -0.03031
-#VICAR_PWA_MEAN = 10194.39
-#VICAR_AREA_MEAN = 13397290
 
-CHECKPOINT_FILE = r"D:\Projects\Waveform\AlternativeRubenCode\thesis-RhythmNet\OutputFolder\model_checkpoints.csv"
-RESULTS_FILE = r"D:\Projects\Waveform\AlternativeRubenCode\thesis-RhythmNet\OutputFolder\results.txt"
-
-# Original data
-PURE_TRACES_PATH = "/tudelft.net/staff-umbrella/StudentsCVlab/jjmkok/PixelTraces/"
-VIPL_TRACES_PATH = "/tudelft.net/staff-umbrella/StudentsCVlab/jjmkok/VIPL_traces/"
-VICAR_TRACES_PATH = "/tudelft.net/staff-bulk/ewi/insy/VisionLab/mbittner/VicarPPGBeyond/SkinpixelFiles/FaceReader9beta2Mask/"
-FACE_DATA_DIR = HOME_DIR + "/../VIPL-HR - original/data/"
-TARGET_SIGNAL_DIR = HOME_DIR + "/" + DATASET + "/clean_hr/"
 
 # Filtered traces
-TRACES_FILTERED_PATH = HOME_DIR + "/" + DATASET + "/traces_filtered5/"
+TRACES_FILTERED_PATH = HOME_DIR / DATASET / "traces_filtered5"
 
 DELAY = 0
 
@@ -83,65 +69,65 @@ else:
 
 # Split signal and hr
 # SPLIT_TRACES = HOME_DIR + DATASET + "/split_traces_" + str(DELAY) + "/"
-SPLIT_TRACES = HOME_DIR + "/"+ DATASET + "/split_traces5_1D/"
+SPLIT_TRACES = HOME_DIR / DATASET / "split_traces5_1D"
 
-SPLIT_STMAPS = HOME_DIR + "/" + DATASET + "/split_stmaps4/"
-SPLIT_STMAPS_OLD = HOME_DIR + "/" + DATASET + "/split_stmaps2/"
-# SPLIT_STMAPS_FILTERED = HOME_DIR + DATASET + "/split_stmaps_filtered2/"
-SPLIT_STMAPS_FILTERED = HOME_DIR + "/"+ DATASET + "/split_stmaps_unfiltered/"
-SPLIT_STMAPS_STRIDE = HOME_DIR + "/" + DATASET + "/split_stmaps2_stride/"
+SPLIT_STMAPS = HOME_DIR / DATASET / "split_stmaps4"
+SPLIT_STMAPS_OLD = HOME_DIR / DATASET / "split_stmaps2"
+# SPLIT_STMAPS_FILTERED = HOME_DIR / DATASET / "split_stmaps_filtered2"
+SPLIT_STMAPS_FILTERED = HOME_DIR / DATASET / "split_stmaps_unfiltered"
+SPLIT_STMAPS_STRIDE = HOME_DIR / DATASET / "split_stmaps2_stride"
 
 # RhythmNet training data
-HR_DATA_PATH = HOME_DIR + "/"+ DATASET + "/hr_rhythmnet/"
-ST_MAPS_PATH = HOME_DIR + "/"+ DATASET + "/IBIS_traces/"
+HR_DATA_PATH = HOME_DIR / DATASET / "hr_rhythmnet"
+ST_MAPS_PATH = HOME_DIR / DATASET / "IBIS_traces"
 
-FIVESECONDS_SIGNAL = HOME_DIR + "/"+ DATASET + "/fiveseconds_signal/"
-FIVESECONDS_HR = HOME_DIR + "/"+ DATASET + "/fiveseconds_hr/"
-FIVESECONDS_CWT = HOME_DIR + "/"+ DATASET + "/fiveseconds_cwt/"
+FIVESECONDS_SIGNAL = HOME_DIR / DATASET / "fiveseconds_signal"
+FIVESECONDS_HR = HOME_DIR / DATASET / "fiveseconds_hr"
+FIVESECONDS_CWT = HOME_DIR / DATASET / "fiveseconds_cwt"
 
-TENSECONDS_SIGNAL = HOME_DIR + "/"+ DATASET + "/tenseconds_signal/"
-TENSECONDS_HR = HOME_DIR + "/"+ DATASET + "/tenseconds_hr/"
-TENSECONDS_CWT = HOME_DIR + "/"+ DATASET + "/tenseconds_cwt/"
+TENSECONDS_SIGNAL = HOME_DIR / DATASET / "tenseconds_signal"
+TENSECONDS_HR = HOME_DIR / DATASET / "tenseconds_hr"
+TENSECONDS_CWT = HOME_DIR / DATASET / "tenseconds_cwt"
 
 # CWTNet training data
-SPLIT_CWT = HOME_DIR + "/"+ DATASET + "/split_cwt5/"
+SPLIT_CWT = HOME_DIR / DATASET / "split_cwt5"
 # SPLIT_CWT = HOME_DIR + DATASET + "/split_cwt_gt_augment/"
 
 if DATA_DIM == '1d':
     DATA_PATH = SPLIT_TRACES
     if USE_GT:
-        TARGET_PATH = DATA_PATH[:-1] + "_gt_" + TARGET + "/"
+        TARGET_PATH = DATA_PATH.parent / f"{DATA_PATH.stem}_gt_{TARGET}"
     else:
-        TARGET_PATH = DATA_PATH[:-1]+"_"+TARGET+"/"
+        TARGET_PATH = DATA_PATH.parent / f"{DATA_PATH.stem}_{TARGET}"
 elif DATA_DIM == '2d':
     DATA_PATH = SPLIT_CWT
     if USE_GT:
-        TARGET_PATH = SPLIT_TRACES[:-1] + "_gt_" + TARGET + "/"
+        TARGET_PATH = SPLIT_TRACES.parent / f"{SPLIT_TRACES.stem}_gt_{TARGET}"
     else:
-        TARGET_PATH = SPLIT_TRACES[:-1]+"_"+TARGET+"/"
+        TARGET_PATH = SPLIT_TRACES.parent / f"{SPLIT_TRACES.stem}_{TARGET}"
 else:
     DATA_PATH = SPLIT_STMAPS_FILTERED
     # DATA_PATH = SPLIT_STMAPS
     if USE_GT:
-        TARGET_PATH = SPLIT_STMAPS[:-1] + "_gt_" + TARGET + "/"
+        TARGET_PATH = SPLIT_STMAPS.parent / f"{SPLIT_STMAPS.stem}_gt_{TARGET}"        
     else:
-        TARGET_PATH = SPLIT_STMAPS[:-1]+"_"+TARGET+"/"
+        TARGET_PATH = SPLIT_STMAPS.parent / f"{SPLIT_STMAPS.stem}_{TARGET}"                
 
 if USE_GT:
-    DATA_PATH = DATA_PATH[:-1] + "_gt/"
+    DATA_PATH = DATA_PATH.parent / f"{DATA_PATH.stem}_gt"
 
-TRAINSET = DATA_PATH + "trainset.npy"
-TESTSET = DATA_PATH + "testset.npy"
-VALSET = DATA_PATH + "valset.npy"
+TRAINSET = DATA_PATH / "trainset.npy"
+TESTSET = DATA_PATH / "testset.npy"
+VALSET = DATA_PATH / "valset.npy"
 
 # Unsplit CWT data
-CWT_FILTERED_PATH = HOME_DIR + DATASET + "/cwt_filtered/"
-FILTERED_TARGET_PATH = HOME_DIR + DATASET + "/filtered_target/"
-CWT_DATA_PATH = HOME_DIR + DATASET + "/cwt_data/"
-CWT_TARGET_PATH = HOME_DIR + DATASET + "/cwt_target/"
+CWT_FILTERED_PATH = HOME_DIR / DATASET / "cwt_filtered"
+FILTERED_TARGET_PATH = HOME_DIR / DATASET / "filtered_target"
+CWT_DATA_PATH = HOME_DIR / DATASET / "cwt_data"
+CWT_TARGET_PATH = HOME_DIR / DATASET / "cwt_target"
 
 # Ground truth split signal
-SPLIT_SIGNAL_DIR = HOME_DIR + DATASET + "/split_signal/"
+SPLIT_SIGNAL_DIR = HOME_DIR / DATASET / "split_signal"
 
 USE_CHECKPOINT = False
 DEVICE = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')

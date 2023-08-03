@@ -5,6 +5,7 @@ import numpy as np
 import torch.nn as nn
 import train_eval_functions
 import config
+
 import sys
 from datetime import datetime
 import glob
@@ -12,26 +13,12 @@ from pathlib import Path
 import re
 
 # from torch.utils.tensorboard import SummaryWriter
-from utils.dataset import DataLoaderSTMaps, DataLoaderCWTNet, DataLoader1D
+
 from utils.plot_scripts import plot_train_curve, bland_altman_plot, gt_vs_est
 from utils.model_utils import load_model_if_checkpointed, save_model_checkpoint
 
-from myModels.CWTNet import CWTNet
-from myModels.CWTNet2 import CWTNet2
-from myModels.TransformerModel import TransformerModel, NoamOpt
-from myModels.CNN1D import CNN1D
-from myModels.resnet1d import ResNet1D
-from myModels.resnet2d import Resnet2D
-
-# Needed in VIPL DATASET where each data item has a different number of frames/maps
-def collate_fn(batch):
-    batched_st_map, batched_targets = [], []
-    # for data in batch:
-    #     batched_st_map.append(data["st_maps"])
-    #     batched_targets.append(data["target"])
-    # # torch.stack(batched_output_per_clip, dim=0).transpose_(0, 1)
-    return batch
-
+from model_factory import get_model
+from dataloader_factory import get_dataloaders
 
 def rmse(l1, l2):
 
@@ -59,26 +46,23 @@ def compute_criteria(target_hr_list, predicted_hr_list):
 def run_training():
     print(sys.argv)
     
-    norm_factor = 1
+    
 
     dt = datetime.now()
     if config.USE_GT:
-        save_path = config.PLOT_PATH + f'{config.DATASET}/{config.DATA_DIM} {config.MODEL} gt/{config.TARGET}/{dt.strftime("%Y_%m_%d_%H_%M_%S_%f")}/'
-        save_path = str(Path(save_path).resolve())
-        save_path += "/"
+        save_path = config.PLOT_PATH / f'{config.DATASET}/{config.DATA_DIM} {config.MODEL} gt/{config.TARGET}/{dt.strftime("%Y_%m_%d_%H_%M_%S_%f")}/'        
     else:
-        save_path = config.PLOT_PATH + f'{config.DATASET}/{config.DATA_DIM} {config.MODEL} original/{config.TARGET}/{dt.strftime("%Y_%m_%d_%H_%M_%S_%f")}/'
-        save_path = str(Path(save_path).resolve())
-        save_path += "/"
+        save_path = config.PLOT_PATH / f'{config.DATASET}/{config.DATA_DIM} {config.MODEL} original/{config.TARGET}/{dt.strftime("%Y_%m_%d_%H_%M_%S_%f")}/'
+        
     os.makedirs(save_path)
 
     # Model training feedback is handled by comet, change this based on your own account configuration
-    experiment = Experiment(api_key="RskpClObaLigQ3GbZrWHTWG8m",
+    experiment = Experiment(api_key="YourAPIKeyHere",
                             project_name="cwt-net",
-                            workspace="bittnerma")
+                            workspace="YourWorkSpaceHere")
 
-    experiment.add_tags(["lr: "+str(config.lr), "batch: "+str(config.BATCH_SIZE), "DATASET: "+config.DATASET,
-                        "hr_path: "+config.TARGET_PATH, "data_path: "+config.TRAINSET, "model: "+config.MODEL])
+    experiment.add_tags([f"lr: {config.lr}", f"batch: {config.BATCH_SIZE}", f"DATASET: {config.DATASET}",
+                        f"hr_path: {config.TARGET_PATH}", f"data_path: {config.TRAINSET}", f"model: {config.MODEL}"])
     experiment.log_parameters(
         {
             "batch_size": config.BATCH_SIZE,
@@ -101,30 +85,8 @@ def run_training():
     # Initialize Model
     # --------------------------------------
 
-    if config.MODEL == 'resnet1d':
-        model = ResNet1D(
-            in_channels=1,
-            base_filters=64,  # 64 for ResNet1D, 352 for ResNeXt1D
-            kernel_size=16,
-            stride=2,
-            groups=1,
-            n_block=10,
-            n_classes=1,
-            norm_factor=norm_factor,
-            downsample_gap=2,
-            increasefilter_gap=2,
-            use_do=True,
-            use_bn=True)
-    elif config.MODEL == 'resnet2d':
-        model = Resnet2D(config.DATA_DIM)
-    elif config.MODEL == 'transformer1d':
-        model = TransformerModel(seq_len=300, d_model=256, nhead=4, d_hid=2048, nlayers=8,
-                                 norm_factor=norm_factor)
-    elif config.MODEL == 'transformer2d':
-        model = CWTNet2(config.MODEL, config.DATA_DIM)
-    else:
-        print("Invalid model type")
-
+    model = get_model(config.MODEL,config.DATA_DIM)
+    
     if config.OPTIMIZER == 'noam':
         optimizer = NoamOpt(2, 500, torch.optim.Adam(model.parameters(), lr=0, betas=(0.9, 0.98), eps=1e-9))
     else:
@@ -150,83 +112,8 @@ def run_training():
     #video_files_test = np.load(config.TESTSET)
     #video_files_val = np.load(config.VALSET)
 
-    if config.DATASET == "vipl":
-        fold = config.VIPL_FOLDS[config.FOLD_NR]
-        if config.DATA_DIM == '2d':
-            files = glob.glob(config.DATA_PATH + "r*.csv")
-            all_files = [config.DATA_PATH+re.split(r"\\|/",file)[-1][2:] for file in files]
-            video_files_test = [config.DATA_PATH+re.split(r"\\|/",file)[-1][2:] for file in files if int(re.split(r"\\|/",file)[-1].split("_")[1][1:]) in fold[0]]
-            video_files_val = [config.DATA_PATH+re.split(r"\\|/",file)[-1][2:] for file in files if int(re.split(r"\\|/",file)[-1].split("_")[1][1:]) in fold[1]]
-        else:
-            all_files = glob.glob(config.DATA_PATH + "*.npy")
-            video_files_test = [file for file in all_files if int(re.split(r"\\|/",file)[-1].split("_")[0][1:]) in fold[0]]
-            video_files_val = [file for file in all_files if int(re.split(r"\\|/",file)[-1].split("_")[0][1:]) in fold[1]]
-    else:
-        fold = config.VICAR_FOLDS[config.FOLD_NR]
-        if config.DATA_DIM == '2d':
-            files = glob.glob(config.DATA_PATH + "r*.csv")
-            all_files = [config.DATA_PATH+re.split(r"\\|/",file)[-1][2:] for file in files]
-            video_files_test = [config.DATA_PATH+re.split(r"\\|/",file)[-1][2:] for file in files if int(re.split(r"\\|/",file)[-1].split("_")[1]) in fold[0]]
-            video_files_val = [config.DATA_PATH+re.split(r"\\|/",file)[-1][2:] for file in files if int(re.split(r"\\|/",file)[-1].split("_")[1]) in fold[1]]
-        else:
-            all_files = glob.glob(config.DATA_PATH + "*.npy")
-            video_files_test = [file for file in all_files if int(re.split(r"\\|/",file)[-1].split("_")[0]) in fold[0]]
-            video_files_val = [file for file in all_files if int(re.split(r"\\|/",file)[-1].split("_")[0]) in fold[1]]
-    video_files_train = [file for file in all_files if file not in video_files_test and file not in video_files_val]
-
-    video_files_train = np.array(video_files_train)
-    video_files_test = np.array(video_files_test)
-    video_files_val = np.array(video_files_val)
-    print(f"Trainset: {len(video_files_train)}, Testset: {len(video_files_test)}, Trainset: {len(video_files_val)}")
-
-
-    # Build Dataloaders
-    if config.DATA_DIM == "3d":
-        train_set = DataLoaderSTMaps(data_files=video_files_train, target_signal_path=config.TARGET_PATH)
-        test_set = DataLoaderSTMaps(data_files=video_files_test, target_signal_path=config.TARGET_PATH)
-        val_set = DataLoaderSTMaps(data_files=video_files_val, target_signal_path=config.TARGET_PATH)
-    elif config.DATA_DIM == "2d":
-        train_set = DataLoaderCWTNet(cwt_files=video_files_train, target_signal_path=config.TARGET_PATH)
-        test_set = DataLoaderCWTNet(cwt_files=video_files_test, target_signal_path=config.TARGET_PATH)
-        val_set = DataLoaderCWTNet(cwt_files=video_files_val, target_signal_path=config.TARGET_PATH)
-    elif config.DATA_DIM == "1d":
-        train_set = DataLoader1D(data_files=video_files_train, target_signal_path=config.TARGET_PATH)
-        test_set = DataLoader1D(data_files=video_files_test, target_signal_path=config.TARGET_PATH)
-        val_set = DataLoader1D(data_files=video_files_val, target_signal_path=config.TARGET_PATH)
-
-    train_loader = torch.utils.data.DataLoader(
-        dataset=train_set,
-        batch_size=config.BATCH_SIZE,
-        num_workers=config.NUM_WORKERS,
-        shuffle=False,
-        collate_fn=collate_fn
-    )
-    # Check if all data exists
-    #for item in train_loader:
-    #    pass
-
-    print('\nTrain DataLoader constructed successfully!')
-
-    test_loader = torch.utils.data.DataLoader(
-        dataset=test_set,
-        batch_size=config.BATCH_SIZE,
-        num_workers=config.NUM_WORKERS,
-        shuffle=False,
-        collate_fn=collate_fn
-    )
-    # Check if all data exists
-    #for item in test_loader:
-    #    pass
-    print('\nEvaluation DataLoader constructed successfully!')
-
-    val_loader = torch.utils.data.DataLoader(
-        dataset=val_set,
-        batch_size=config.BATCH_SIZE,
-        num_workers=config.NUM_WORKERS,
-        shuffle=False,
-        collate_fn=collate_fn
-    )
-
+    train_loader,test_loader,val_loader = get_dataloaders(config)
+    
     # Load checkpointed model (if  present)
     if config.USE_CHECKPOINT:
         model, optimizer, checkpointed_loss, checkpoint_flag = load_model_if_checkpointed(model, optimizer, config.CHECKPOINT_PATH, load_on_cpu=not torch.cuda.is_available())
@@ -295,7 +182,7 @@ def run_training():
     print(f"Avg Training Loss: {np.mean(mean_loss)} for {config.EPOCHS} epochs")
 
 
-    print(f"Finished Training, Validating {len(video_files_test)} video files for {config.EPOCHS_VAL} Epochs")
+    print(f"Finished Training, Validating {len(train_loader)} video files for {config.EPOCHS_VAL} Epochs")
     checkpoint = torch.load(save_path + f"running_model_{checkpointed_loss}.pt")
     model.load_state_dict(checkpoint['model_state_dict'])
     for epoch in range(config.EPOCHS_VAL):
