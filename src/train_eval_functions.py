@@ -18,8 +18,8 @@ def train_fn(model, data_loader, optimizer, loss_fn):
             optimizer.optimizer.zero_grad()
         else:
             optimizer.zero_grad()
-        inputs = torch.stack(tuple(data['data'].to(config.DEVICE) for data in batch))
-        targets = torch.stack(tuple(data['target'].to(config.DEVICE) for data in batch))
+        inputs = torch.stack(tuple(data['data'] for data in batch))
+        targets = torch.stack(tuple(data['target'] for data in batch))
 
         with torch.set_grad_enabled(True):
             outputs = model(inputs)

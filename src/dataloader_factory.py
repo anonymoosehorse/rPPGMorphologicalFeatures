@@ -13,7 +13,7 @@ def collate_fn(batch):
     # # torch.stack(batched_output_per_clip, dim=0).transpose_(0, 1)
     return batch
 
-def get_dataloaders(config):
+def get_dataloaders(config,device):
 
     if config.DATASET == "vipl":
         fold = config.VIPL_FOLDS[config.FOLD_NR]
@@ -47,17 +47,17 @@ def get_dataloaders(config):
 
     # Build Dataloaders
     if config.DATA_DIM == "3d":
-        train_set = DataLoaderSTMaps(data_files=video_files_train, target_signal_path=config.TARGET_PATH)
-        test_set = DataLoaderSTMaps(data_files=video_files_test, target_signal_path=config.TARGET_PATH)
-        val_set = DataLoaderSTMaps(data_files=video_files_val, target_signal_path=config.TARGET_PATH)
+        train_set = DataLoaderSTMaps(data_files=video_files_train, target_signal_path=config.TARGET_PATH,device=device)
+        test_set = DataLoaderSTMaps(data_files=video_files_test, target_signal_path=config.TARGET_PATH,device=device)
+        val_set = DataLoaderSTMaps(data_files=video_files_val, target_signal_path=config.TARGET_PATH,device=device)
     elif config.DATA_DIM == "2d":
-        train_set = DataLoaderCWTNet(cwt_files=video_files_train, target_signal_path=config.TARGET_PATH)
-        test_set = DataLoaderCWTNet(cwt_files=video_files_test, target_signal_path=config.TARGET_PATH)
-        val_set = DataLoaderCWTNet(cwt_files=video_files_val, target_signal_path=config.TARGET_PATH)
+        train_set = DataLoaderCWTNet(cwt_files=video_files_train, target_signal_path=config.TARGET_PATH,device=device)
+        test_set = DataLoaderCWTNet(cwt_files=video_files_test, target_signal_path=config.TARGET_PATH,device=device)
+        val_set = DataLoaderCWTNet(cwt_files=video_files_val, target_signal_path=config.TARGET_PATH,device=device)
     elif config.DATA_DIM == "1d":
-        train_set = DataLoader1D(data_files=video_files_train, target_signal_path=config.TARGET_PATH)
-        test_set = DataLoader1D(data_files=video_files_test, target_signal_path=config.TARGET_PATH)
-        val_set = DataLoader1D(data_files=video_files_val, target_signal_path=config.TARGET_PATH)
+        train_set = DataLoader1D(data_files=video_files_train, target_signal_path=config.TARGET_PATH,device=device)
+        test_set = DataLoader1D(data_files=video_files_test, target_signal_path=config.TARGET_PATH,device=device)
+        val_set = DataLoader1D(data_files=video_files_val, target_signal_path=config.TARGET_PATH,device=device)
 
     train_loader = torch.utils.data.DataLoader(
         dataset=train_set,

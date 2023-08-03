@@ -6,8 +6,8 @@ haarcascade_url = "https://raw.githubusercontent.com/opencv/opencv/master/data/h
 eye_cascade_url = "https://raw.githubusercontent.com/opencv/opencv/master/data/haarcascades/haarcascade_eye.xml"
 
 
-CHECKPOINT_PATH = HOME_DIR.parent / Path("thesis/checkpoint/")
 
+CHECKPOINT_PATH = HOME_DIR.parent / Path("thesis/checkpoint/")
 PLOT_PATH = HOME_DIR.parent / Path("thesis/plots/")
 if len(sys.argv) == 8:
     DATASET = sys.argv[1]
@@ -36,6 +36,9 @@ else:
     VIPL_MIN = -0.3398
     VICAR_MAX = 0.04123
     VICAR_MIN = -0.03031
+#VICAR_PWA_MEAN = 10194.39
+#VICAR_AREA_MEAN = 13397290
+
 
 
 # Filtered traces
