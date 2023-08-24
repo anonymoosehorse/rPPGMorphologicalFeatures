@@ -1,0 +1,12 @@
+vicar:
+  gt_path: "D:\Projects\Waveform\Data\VicarPPGBeyond\cleanedSignals"
+  gt_fs: 500
+  gt_type: "h5py"
+  default_test_ids: [6, 8]
+  default_val_ids: [1, 10]
+vipl:
+  gt_path:
+  gt_fs: 60
+  gt_type: "numpy"
+  default_test_ids: [19, 62, 86, 67, 37, 77, 40, 7, 36, 100, 83, 89, 6, 45, 32, 22]
+  default_val_ids: [33, 97, 98, 69, 71, 103, 9, 59, 43, 12, 104, 50, 88, 90, 27, 61]

@@ -71,7 +71,7 @@ class DataLoader1D(Dataset):
         file_name = self.data_files[index].stem
 
         #data = torch.tensor(np.loadtxt(self.data_path + file_name + ".csv", delimiter=','))
-        data = torch.tensor(np.loadtxt(self.data_path / f"{file_name}.npy"))
+        data = torch.tensor(np.loadtxt(self.data_path / f"{file_name}.npy"))[1,:]
 
         target_hr = get_hr_data_filtered(file_name, self.target_path)
 
@@ -79,13 +79,13 @@ class DataLoader1D(Dataset):
         if self.cfg.model.name == 'tranformer1d':
             if self.cfg.dataset.name == "vipl":
                 dif = self.dataset_stats.VIPL_MAX - self.dataset_stats.VIPL_MIN
-                data[1,:] = (data[1,:] - self.dataset_stats.VIPL_MIN) / dif # Change to range 0-1
+                data = (data - self.dataset_stats.VIPL_MIN) / dif # Change to range 0-1
             elif self.cfg.dataset.name  == "vicar":
                 dif = self.dataset_stats.VICAR_MAX - self.dataset_stats.VICAR_MIN
-                data[1,:] = (data[1,:] - self.dataset_stats.VICAR_MIN) / dif
+                data = (data - self.dataset_stats.VICAR_MIN) / dif
 
         return {
-            "data": data[1,:].float().to(self.device),
+            "data": data.float().to(self.device),
             "target": torch.tensor(target_hr).float().to(self.device)
         }
 

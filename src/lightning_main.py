@@ -4,7 +4,6 @@ import torchmetrics
 import torch.nn as nn
 import torch
 from pytorch_lightning.loggers import CometLogger
-import config
 from model_factory import get_model
 from dataloader_factory import get_dataloaders
 from omegaconf import OmegaConf
@@ -19,7 +18,8 @@ class Runner(pl.LightningModule):
         
         self.train_mae = torchmetrics.MeanAbsoluteError()        
         self.val_mae = torchmetrics.MeanAbsoluteError()        
-        self.test_mae = torchmetrics.MeanAbsoluteError()        
+        self.test_mae = torchmetrics.MeanAbsoluteError()  
+        # self.automatic_optimization = True      
         
 
     def forward(self, x):
@@ -30,6 +30,8 @@ class Runner(pl.LightningModule):
     def configure_optimizers(self):
         if self.cfg.optimize.optimizer == 'Adam':
             optimizer = torch.optim.Adam(self.model.parameters(), lr=self.cfg.optimize.lr)
+        elif self.cfg.optimize.optimizer == 'SGD':
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.cfg.optimize.lr)
         else:
             raise NotImplementedError(f"Optimizer {self.cfg.optimizer}")
         return optimizer

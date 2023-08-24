@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import pandas as pd
-import config
 
 # Reads the clip-wise HR data that was computed and stored in the csv files (per video)
 def get_hr_data(file_name):

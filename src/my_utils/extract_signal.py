@@ -1,68 +1,11 @@
 import json
 import numpy as np
-from scipy.signal import butter,filtfilt
 import matplotlib.pyplot as plt
 import glob
 from tqdm import tqdm
-
+from .signal_processing import pos,butter_lowpass_filter
+from .visualization import plot_signal
 import config
-
-
-def pos(r, g, b):
-    tn_r = temp_normalize(r)
-    tn_g = temp_normalize(g)
-    tn_b = temp_normalize(b)
-
-    s1 = tn_g - tn_b
-    s2 = tn_g + tn_b - 2 * tn_r
-
-    alpha = np.nanstd(s1) / np.nanstd(s2)
-
-    z = s1 + alpha * s2
-
-    return z
-
-
-def temp_normalize(signal):
-    #print(signal[0])
-    #print(np.nan(signal))
-    mean = np.nanmean(signal)
-    #print(mean)
-    return signal / (mean - 1)
-
-
-def butter_lowpass_filter(data, fs, order):
-    nyq = 0.5 * fs
-    # Get the filter coefficients
-    # b, a = butter(order, normal_cutoff, btype='low', analog=False)
-    b, a = butter(order, (0.5 / nyq, 6/ nyq), btype='bandpass', analog=False)
-    y = filtfilt(b, a, data)
-
-    return y
-
-
-def plot_signal(traces_path):
-    files = glob.glob(traces_path + "*.json")
-
-    for file in tqdm(files, total=len(files)):
-        file = file.replace('\\', '/')
-
-        with open(file, 'r') as f:
-            data = json.load(f)
-
-        r = np.array(data["R"], dtype=float)
-        g = np.array(data["G"], dtype=float)
-        b = np.array(data["B"], dtype=float)
-        t = np.array(data["Times"], dtype=float)
-
-        r_norm = (r - r.min()) / (r.max() - r.min())
-        g_norm = (g - g.min()) / (g.max() - g.min())
-        b_norm = (b - b.min()) / (b.max() - b.min())
-
-        plt.plot(t, r_norm, 'r')
-        plt.plot(t, g_norm, 'g')
-        plt.plot(t, b_norm, 'b')
-        plt.show()
 
 
 def extract_signal_stmap(data_path, save_path, fps):
@@ -132,6 +75,7 @@ def extract_signal(traces_path, save_path, fps, dataset):
         if len(output[1]) < 10:
             print(file)
             continue
+
         output[1] = butter_lowpass_filter(output[1], fps, 2)
 
         #plt.plot(output[0, :300], output[1, :300])
@@ -159,5 +103,8 @@ if __name__ == '__main__':
     extract_signal_stmap(data_path, save_path, fps)
 
     #plot_signal(traces_path)
+
+
+
 
 

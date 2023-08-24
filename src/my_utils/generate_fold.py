@@ -183,9 +183,11 @@ def generate_fold_stmaps(path, dataset):
 
 if __name__ == '__main__':
     dataset = "vipl"
-    data_path = f"/tudelft.net/staff-umbrella/StudentsCVlab/rsangers/data/{dataset}/split_stmaps3/"
+    dataset = "vicar"
+    # data_path = f"/tudelft.net/staff-umbrella/StudentsCVlab/rsangers/data/{dataset}/split_stmaps3/"
+    data_path = f"D:\\Projects\\Waveform\\Code\\AlternativeRubenCode\\waveform_feature_estimation\\OutputFolder\\data\\{dataset}\\split_traces5_1D" + r"\\"
 
     # generate_fold_cwt(data_path, dataset)
-    # generate_fold_1D(data_path, dataset)
+    generate_fold_1D(data_path, dataset)
     # generate_fold_simulated(config.SPLIT_CWT)
-    generate_fold_stmaps(data_path, dataset)
+    # generate_fold_stmaps(data_path, dataset)

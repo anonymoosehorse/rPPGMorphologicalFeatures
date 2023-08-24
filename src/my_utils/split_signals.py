@@ -11,53 +11,8 @@ from torchvision.transforms import ToTensor, ToPILImage
 import math
 import os
 import h5py
-
-def detect_peaks(sig, peak_delta):
-    peaks = []
-    valleys = []
-
-    # Normalization by the mean
-    norm_sig = sig - np.mean(sig)
-    delta = peak_delta * np.max(norm_sig)
-
-    mxpos = 0
-    mnpos = 0
-    lookformax = True
-    mx = np.NINF
-    mn = np.Inf
-
-    for (i, temp) in enumerate(norm_sig):
-        if (temp > mx):
-            mx = temp
-            mxpos = i
-        if (temp < mn):
-            mn = temp
-            mnpos = i
-
-        if (lookformax):
-
-            if (temp < (mx - delta)):
-                # numPeaks++
-                peaks.append(mxpos)
-                mn = temp
-                mnpos = i
-                lookformax = False
-
-        else:
-
-            if (temp > (mn + delta)):
-                # numValleys++
-                valleys.append(mnpos)
-                mx = temp
-                mxpos = i
-                lookformax = True
-
-    # Remove the peak in clipped areas
-    # for (int i = 0 i < (parameters.LeftClip - 1) i++) peakers[i] = false
-    # for (int i = peakers.Length - (parameters.RightClip + 1) i < len(peakers) i++) peakers[i] = false
-
-    return peaks, valleys
-
+from pathlib import Path
+from signal_processing import detect_peaks
 
 def split_signal(signal_path, signal_length, signal_save_path, hr_save_path):
     files = glob.glob(signal_path + "*.csv")
@@ -814,18 +769,19 @@ if __name__ == '__main__':
     use_gt = False
     use_stride = False
 
-    signal_path = config.TRACES_FILTERED_PATH
+    signal_path = str(config.TRACES_FILTERED_PATH) + "\\"
     # signal_path = config.ST_MAPS_PATH
     # signal_save_path = config.SPLIT_TRACES[:-1]+"_gt"
-    signal_save_path = config.SPLIT_TRACES
+    signal_save_path = str(config.SPLIT_TRACES) + "\\"
     # signal_save_path = config.SPLIT_STMAPS
 
     dataset = config.DATASET
     if dataset == 'vicar':
         # gt_path = "/tudelft.net/staff-umbrella/StudentsCVlab/rsangers/VicarPPGBeyond_SpO2Alignment/Signals/"
-        gt_path = "/tudelft.net/staff-bulk/ewi/insy/VisionLab/mbittner/VicarPPGBeyond/cleanedSignals/"
+        # gt_path = "/tudelft.net/staff-bulk/ewi/insy/VisionLab/mbittner/VicarPPGBeyond/cleanedSignals/"
+        gt_path = str(Path("D:\Projects\Waveform\Data\VicarPPGBeyond\cleanedSignals")) + "\\"
     else:
-        gt_path = config.TARGET_SIGNAL_DIR
+        gt_path = str(config.TARGET_SIGNAL_DIR) + "\\"
 
     # delay = 500
     # signal_path = "C:/Users/ruben/Documents/thesis/data/vipl/traces_filtered/"
