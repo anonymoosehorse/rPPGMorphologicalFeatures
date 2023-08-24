@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from torchvision.transforms import ToTensor
 from tqdm import tqdm
 import pickle as pkl
+from omegaconf import OmegaConf
 
 def get_data_from_json(json_path):
     with open(json_path, 'r') as f:
@@ -160,76 +161,62 @@ from my_utils.signal_processing import signal_to_cwt
 
 def create_cwt(splits):
     cwt_dataset = {}
-    for name,data in tqdm(splits.items()):
-        cwt_dataset[name] = {}
-        for idx,sig,time in zip(data['SplitIndex'],data['SplitData'],data['SplitTime']):
+    for name,data in tqdm(splits.copy().items()):
+        cwt_list = []
+        for sig,time in zip(data.pop('SplitData'),data.pop('SplitTime')):
             cwt = signal_to_cwt(time,sig,output_size=256)
-            cwt_dataset[name][idx] = cwt
+            cwt_list.append(cwt)
+        cwt_dataset[name] = data
+        cwt_dataset[name]['SplitData'] = cwt_list
+
     return cwt_dataset
 
 if __name__ == '__main__':
-    traces_path = config.VICAR_TRACES_PATH
-    save_path = config.TRACES_FILTERED_PATH
-    dataset = 'vipl'
-    # traces_path = "C:/Users/ruben/Documents/thesis/data/vipl/raw_signal/"
-    fps = 30
+    cfg = OmegaConf.load('conversion_config.yaml')     
+    data_cfg = OmegaConf.load('dataset_config.yaml')
+    data_cfg = data_cfg[cfg.dataset_to_run]
 
-    # extract_signal(traces_path, save_path, fps, dataset)
+    traces_path = Path(data_cfg.traces_path)
+    fps = data_cfg.traces_fps
 
-    # data_path = "C:/Users/ruben/Documents/thesis/data/vipl/split_stmaps2/"
-    data_path = config.SPLIT_STMAPS
-    save_path = config.SPLIT_STMAPS_FILTERED
+    use_gt = cfg.use_gt
+    use_stride = cfg.use_stride
 
-    signal_dict =  read_and_process(traces_path,fps)
+    dataset = cfg.dataset_to_run
+    gt_path = Path(data_cfg.gt_path)
+    gt_fps = data_cfg.gt_fps
 
-    # extract_signal_stmap(data_path, save_path, fps)
+    ## Create the output path for the generated data
+    train_data_path = Path.cwd() / cfg['output_directory'] / dataset
+    train_data_path.mkdir(exist_ok=True,parents=True)
 
-    #plot_signal(traces_path)
+    print("Loading traces data filter and resample...", end=" ")
+    if not use_gt:
+        signal_dict =  read_and_process(traces_path,fps)            
+        
+        if fps != 30:
+            signal_dict = resample_data(signal_dict,fps,30)
+            fps = 30
+    print("Done")
 
-    use_gt = False
-    use_stride = False
-
-    signal_path = str(config.TRACES_FILTERED_PATH) + "\\"
-    # signal_path = config.ST_MAPS_PATH
-    # signal_save_path = config.SPLIT_TRACES[:-1]+"_gt"
-    signal_save_path = str(config.SPLIT_TRACES) + "\\"
-    # signal_save_path = config.SPLIT_STMAPS
-
-    dataset = config.DATASET
-    if dataset == 'vicar':
-        # gt_path = "/tudelft.net/staff-umbrella/StudentsCVlab/rsangers/VicarPPGBeyond_SpO2Alignment/Signals/"
-        # gt_path = "/tudelft.net/staff-bulk/ewi/insy/VisionLab/mbittner/VicarPPGBeyond/cleanedSignals/"
-        gt_path = str(Path("D:\Projects\Waveform\Data\VicarPPGBeyond\cleanedSignals")) + "\\"
-    else:
-        gt_path = str(config.TARGET_SIGNAL_DIR) + "\\"
-
-    # delay = 500
-    # signal_path = "C:/Users/ruben/Documents/thesis/data/vipl/traces_filtered/"
-    #gt_path = "C:/Users/ruben/Documents/thesis/data/pure/clean_hr/"
-    # signal_path = "C:/Users/ruben/Documents/thesis/data/vicar/vicar_traces_filtered/"
-    # gt_path = "C:/Users/ruben/Documents/thesis/data/vicar/vicar_gt/"
-    # peaks_path = "C:/Users/ruben/Documents/thesis/data/vipl_signal/"
-    # signal_save_path = "C:/Users/ruben/Documents/thesis/data/test_cwt/"
-    # hr_save_path = "C:/Users/ruben/Documents/thesis/data/fiveseconds_hr/"
-
+    print("Loading Ground Truth signal data...", end=" ")
     if dataset == "vicar":
-        load_func = read_h5
-        gt_fps = 500
+        load_func = read_h5        
     elif dataset == "vipl":
-        load_func = read_numpy
-        gt_fps = 60
-        signal_dict = resample_data(signal_dict,25,30)
-
+        load_func = read_numpy    
     
-    gt_sig_dict = read_gt_data(Path(gt_path),gt_fps,load_func)
+    gt_sig_dict = read_gt_data(gt_path,gt_fps,load_func)
 
     if use_gt:
         signal_dict = resample_data(gt_sig_dict,gt_fps,30)
+        fps = 30
+    print("Done")
+    
+    print("Split data, calculate features and clean ...", end=" ")
 
     extrema_dict = detect_extrema_to_dict(gt_sig_dict)
-
-    # Linear resample GT of VIPL data
-    splits = create_splits(signal_dict,gt_sig_dict,extrema_dict,fps=30)
+    
+    splits = create_splits(signal_dict,gt_sig_dict,extrema_dict,fps=fps)
 
     for name,data in splits.items():
         if dataset == 'vicar':
@@ -239,16 +226,26 @@ if __name__ == '__main__':
             data['AUP'] = list((np.array(data['AUP'])*1000) / 30)
 
     splits = remove_faulty_splits(splits)
+    
+    print("Done")    
 
-    with open("1D_Signal_Traces.pkl",'wb') as f:
+    suffix = "_GT" if use_gt else ""
+
+    print("Save traces training data ...",end=" ")
+    with open(train_data_path / f"1D_Signal_Traces{suffix}.pkl",'wb') as f:
         pkl.dump(splits,f)
+    print("Done")
 
+    print("Generate CWT data",end=' ')
     cwt_data = create_cwt(splits)
+    print("Done")
 
-    with open("2D_Signal_CWT.pkl",'wb') as f:
+    print("Save CWT training data ...",end=" ")
+    with open(train_data_path / f"2D_Signal_CWT{suffix}.pkl",'wb') as f:
         pkl.dump(cwt_data,f)
+    print("Done")
 
-    print()
+    
     
     # correct_bpm(hr_save_path)
     # plot_bpms(hr_save_path)

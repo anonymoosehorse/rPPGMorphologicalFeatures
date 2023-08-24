@@ -95,9 +95,9 @@ if __name__ == "__main__":
     # deterministic.
     pl.seed_everything(cfg.seed, workers=True)
 
-    comet_logger = CometLogger(**cfg.comet) 
+    # comet_logger = CometLogger(**cfg.comet) 
 
-    comet_logger.log_hyperparams(OmegaConf.to_container(cfg,resolve=True))
+    # comet_logger.log_hyperparams(OmegaConf.to_container(cfg,resolve=True))
 
     model = get_model(cfg.model.name,cfg.model.data_dim)
     
@@ -105,7 +105,7 @@ if __name__ == "__main__":
 
     trainer = pl.Trainer(
         max_epochs=cfg.train.epochs,
-        logger=comet_logger,               
+        # logger=comet_logger,               
         accelerator='auto'
     )
     

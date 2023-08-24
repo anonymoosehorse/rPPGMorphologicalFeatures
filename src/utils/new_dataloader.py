@@ -10,6 +10,7 @@ from constants import DatasetStats
 from utils.file_io import read_target_data, get_hr_data, get_hr_data_stmaps, get_hr_data_filtered
 import torch.nn.functional as F
 import cv2
+import pickle as pkl
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -32,8 +33,8 @@ class DataLoaderCWTNet(Dataset):
     def __getitem__(self, index):
         file_name = self.cwt_files[index].stem
 
-        real = torch.tensor(np.loadtxt(self.cwt_path / f"r_{file_name}.csv" , delimiter=','))
-        imag = torch.tensor(np.loadtxt(self.cwt_path / f"i_{file_name}.csv", delimiter=','))
+        real = torch.tensor(np.loadtxt(self.cwt_path + "r_" + file_name + ".csv", delimiter=','))
+        imag = torch.tensor(np.loadtxt(self.cwt_path + "i_" + file_name + ".csv", delimiter=','))
 
         #real = self.transform(real)
         #imag = self.transform(imag)
@@ -51,9 +52,16 @@ class DataLoaderCWTNet(Dataset):
 
 
 class DataLoader1D(Dataset):
-    def __init__(self, data_files, target_signal_path,device,cfg):
-        self.data_files = data_files
-        self.data_path = self.data_files[0].parent
+    def __init__(self, traces_pkl_path,device,cfg):
+        self.traces_pkl_path = traces_pkl_path
+        with open(self.traces_pkl_path,'rb') as f:
+            self.data = pkl.load(f)
+
+        name_to_id = lambda x: int(x.split("_")[0])
+        name_id_lookup = {name_to_id(name):name for name in self.data.keys()}
+        ## Stopped here, how to pass data to loader? First load, then create dataset? => More data efficient!
+
+        self.lookup = {name for name, data in self.data.items() for }
         #self.transform = transforms.Compose([
         #    transforms.ToPILImage(),
         #    transforms.Resize((224, 224)),

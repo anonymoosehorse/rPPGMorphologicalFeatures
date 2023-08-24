@@ -50,18 +50,18 @@ class DataPaths(object):
             else:
                 self.TARGET_PATH = self.DATA_PATH.parent / f"{self.DATA_PATH.stem}_{TARGET}"
         elif DATA_DIM == '2d':
-            self.DATA_PATH = SPLIT_CWT
+            self.DATA_PATH = self.SPLIT_CWT
             if USE_GT:
-                self.TARGET_PATH = SPLIT_TRACES.parent / f"{SPLIT_TRACES.stem}_gt_{TARGET}"
+                self.TARGET_PATH = self.SPLIT_TRACES.parent / f"{self.SPLIT_TRACES.stem}_gt_{TARGET}"
             else:
-                self.TARGET_PATH = SPLIT_TRACES.parent / f"{SPLIT_TRACES.stem}_{TARGET}"
+                self.TARGET_PATH = self.SPLIT_TRACES.parent / f"{self.SPLIT_TRACES.stem}_{TARGET}"
         else:
-            self.DATA_PATH = SPLIT_STMAPS_FILTERED
+            self.DATA_PATH = self.SPLIT_STMAPS_FILTERED
             # DATA_PATH = SPLIT_STMAPS
             if USE_GT:
-                self.TARGET_PATH = SPLIT_STMAPS.parent / f"{SPLIT_STMAPS.stem}_gt_{TARGET}"        
+                self.TARGET_PATH = self.SPLIT_STMAPS.parent / f"{self.SPLIT_STMAPS.stem}_gt_{TARGET}"        
             else:
-                self.TARGET_PATH = SPLIT_STMAPS.parent / f"{SPLIT_STMAPS.stem}_{TARGET}"                
+                self.TARGET_PATH = self.SPLIT_STMAPS.parent / f"{self.SPLIT_STMAPS.stem}_{TARGET}"                
 
         if USE_GT:
             self.DATA_PATH = self.DATA_PATH.parent / f"{self.DATA_PATH.stem}_gt"

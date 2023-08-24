@@ -1,0 +1,4 @@
+use_gt: False
+use_stride: False
+dataset_to_run: 'vicar'
+output_directory: 'TrainingData'
