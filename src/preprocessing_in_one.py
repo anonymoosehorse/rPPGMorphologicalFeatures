@@ -109,6 +109,10 @@ def create_splits(signal_dict,gt_dict,extrema_dict,fps,window_time_s=10):
     for name, data in tqdm(signal_dict.items()):
         time = data[0,:]
         signal = data[1,:]
+
+        if name not in gt_dict:
+            print(f"Skipping {name} as no Ground Truth could be found")
+            continue
         
         split_indices = np.arange(0, len(signal), window_time_s*fps)
         gt_split_indices = gt_split_indices = ((split_indices / fps) * gt_fps).astype(int)
@@ -173,6 +177,9 @@ def create_cwt(splits):
 
 if __name__ == '__main__':
     cfg = OmegaConf.load('conversion_config.yaml')     
+    cmd_cfg = OmegaConf.from_cli()
+    cfg = OmegaConf.merge(cfg, cmd_cfg)
+
     data_cfg = OmegaConf.load('dataset_config.yaml')
     data_cfg = data_cfg[cfg.dataset_to_run]
 
@@ -229,10 +236,10 @@ if __name__ == '__main__':
     
     print("Done")    
 
-    suffix = "_GT" if use_gt else ""
+    suffix = "_gt" if use_gt else ""
 
     print("Save traces training data ...",end=" ")
-    with open(train_data_path / f"1D_Signal_Traces{suffix}.pkl",'wb') as f:
+    with open(train_data_path / f"traces_data{suffix}.pkl",'wb') as f:
         pkl.dump(splits,f)
     print("Done")
 
@@ -241,7 +248,7 @@ if __name__ == '__main__':
     print("Done")
 
     print("Save CWT training data ...",end=" ")
-    with open(train_data_path / f"2D_Signal_CWT{suffix}.pkl",'wb') as f:
+    with open(train_data_path / f"cwt_data{suffix}.pkl",'wb') as f:
         pkl.dump(cwt_data,f)
     print("Done")
 

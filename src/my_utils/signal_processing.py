@@ -6,6 +6,21 @@ import glob
 from tqdm import tqdm
 import pycwt as wavelet
 
+def pos_img(mat,axis=0,time_dim=0):
+    mean = np.nanmean(mat,axis=time_dim)
+    tn_mat = mat / (mean - 1)
+
+    proj_mat = np.array([[0,1,-1],[-2,1,1]])
+
+    s_mat = tn_mat @ proj_mat.T
+
+    std_mat = np.nanstd(s_mat,axis=axis)
+    alpha = std_mat[:,0] / std_mat[:,1]
+
+    z_mat = s_mat[:,:,0] + alpha * s_mat[:,:,1]
+
+    return z_mat
+
 def pos(r, g, b):
     tn_r = temp_normalize(r)
     tn_g = temp_normalize(g)

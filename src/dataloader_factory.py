@@ -23,9 +23,9 @@ def get_dataloaders(cfg,device):
         fold = folds.VIPL_FOLDS[cfg.dataset.fold_number]
         if cfg.model.data_dim == '2d':
             files = list(paths.DATA_PATH.glob("r*.csv"))
-            all_files = [paths.DATA_PATH+file.stem[2:] for file in files]
-            video_files_test = [paths.DATA_PATH+file.stem[2:] for file in files if int(file.stem.split("_")[1][1:]) in fold[0]]
-            video_files_val = [paths.DATA_PATH+file.stem[2:] for file in files if int(file.stem.split("_")[1][1:]) in fold[1]]
+            all_files = [paths.DATA_PATH / file.stem[2:] for file in files]
+            video_files_test = [paths.DATA_PATH / file.stem[2:] for file in files if int(file.stem.split("_")[1][1:]) in fold[0]]
+            video_files_val = [paths.DATA_PATH / file.stem[2:] for file in files if int(file.stem.split("_")[1][1:]) in fold[1]]
         else:
             all_files = paths.DATA_PATH.glob("*.npy")
             video_files_test = [file for file in all_files if int(file.stem.split("_")[0][1:]) in fold[0]]
