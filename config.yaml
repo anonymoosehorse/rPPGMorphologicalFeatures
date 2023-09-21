@@ -1,0 +1,29 @@
+seed: 0
+optimize:
+  optimizer: Adam
+  lr: 0.001
+train:
+  epochs: 5
+  batch_size: 1
+model:
+  name: transformer1d #resnet2d #resnet1d #resnet2d #transformer1d #
+  data_dim: 1d #1d #2d #2d #1d #3d #1d
+  input_representation: traces #cwt #cwt #traces #ibis #traces #cwt, ibis
+  target: HR #AUP # RT,PWA,HR
+dataset:
+  name: vicar #vipl  
+  root: ./TrainingData #./OutputFolder/data # ./TrainingData
+  num_workers: 1
+  fold_number: 0
+  use_gt: false 
+  use_yuv: false
+comet:
+  api_key: 
+  workspace: 
+  project_name: 
+# wandb:
+#   log: true
+#   dir: ./
+#   experiment_name: ''
+#   entity: ''
+#   project: ''

@@ -239,19 +239,34 @@ if __name__ == '__main__':
     suffix = "_gt" if use_gt else ""
 
     print("Save traces training data ...",end=" ")
-    with open(train_data_path / f"traces_data{suffix}.pkl",'wb') as f:
-        pkl.dump(splits,f)
+    with h5py.File(train_data_path / f"traces_data{suffix}.h5", 'w') as hf:
+        for name,data in splits.items():
+            group = hf.create_group(name)
+            for key,sub_splits in data.items():
+                group.create_dataset(key,data=sub_splits)
     print("Done")
+
+    # print("Save traces training data ...",end=" ")
+    # with open(train_data_path / f"traces_data{suffix}.pkl",'wb') as f:
+    #     pkl.dump(splits,f)
+    # print("Done")
 
     print("Generate CWT data",end=' ')
     cwt_data = create_cwt(splits)
     print("Done")
 
-    print("Save CWT training data ...",end=" ")
-    with open(train_data_path / f"cwt_data{suffix}.pkl",'wb') as f:
-        pkl.dump(cwt_data,f)
-    print("Done")
+    # print("Save CWT training data ...",end=" ")
+    # with open(train_data_path / f"cwt_data{suffix}.pkl",'wb') as f:
+    #     pkl.dump(cwt_data,f)
+    # print("Done")
 
+    print("Save CWT training data ...",end=" ")
+    with h5py.File(train_data_path / f"cwt_data{suffix}.h5", 'w') as hf:
+        for name,data in cwt_data.items():
+            group = hf.create_group(name)
+            for key,sub_splits in data.items():
+                group.create_dataset(key,data=sub_splits)
+    print("Done")
     
     
     # correct_bpm(hr_save_path)

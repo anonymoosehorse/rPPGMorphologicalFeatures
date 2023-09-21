@@ -1,6 +1,9 @@
 /VIPL-HR - original/data/
 /venv/
 /OutputFolder
+/lightning_logs
+/csv_logs
+/model_checkpoints
 /cwt-net/
 _junkyard/
 test_*
@@ -12,6 +15,7 @@ test_*
 *.txt
 *.csv
 *.pkl
+*.h5
 x_*
 
 

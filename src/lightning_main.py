@@ -3,11 +3,11 @@ import pytorch_lightning as pl
 import torchmetrics
 import torch.nn as nn
 import torch
-from pytorch_lightning.loggers import CometLogger
+from pytorch_lightning.loggers import CometLogger, CSVLogger
 from model_factory import get_model
-from dataloader_factory import get_dataloaders
+# from dataloader_factory import get_dataloaders
 from new_dataloader import get_dataloaders as new_get_dataloaders
-from new_dataloader import get_data,get_name_to_id_func
+from new_dataloader import get_data_path,get_name_to_id_func
 from omegaconf import OmegaConf
 from constants import DataFoldsNew
 
@@ -71,6 +71,7 @@ class Runner(pl.LightningModule):
 
         # Log test loss
         self.log("test/loss_step", loss)
+        self.log("test/loss_step"+f"/{batch['name']}", loss)
         return loss
 
     def on_train_epoch_end(self):
@@ -104,22 +105,33 @@ if __name__ == "__main__":
     pl.seed_everything(cfg.seed, workers=True)
 
     comet_logger = CometLogger(**cfg.comet) 
-
     comet_logger.log_hyperparams(OmegaConf.to_container(cfg,resolve=True))
+    experiment_name = comet_logger.experiment.name
+    csv_logger = CSVLogger("csv_logs",name=experiment_name)
 
     model = get_model(cfg.model.name,cfg.model.data_dim)
     model = model.to(device)
     
     runner = Runner(cfg, model)
 
+    # Create an instance of ModelCheckpoint
+    checkpoint_callback = pl.callbacks.ModelCheckpoint(
+        monitor='val/MAE',  # Metric to monitor for best performance
+        dirpath='model_checkpoints/' + experiment_name,  # Directory where checkpoints will be saved
+        filename=r'{epoch}-{val/MAE:.2f}',  # File name prefix for saved models
+        save_top_k=1,  # Save only the best model
+        mode='min',  # 'min' or 'max' depending on the monitored metric
+    )
+
     trainer = pl.Trainer(
         max_epochs=cfg.train.epochs,
-        logger=comet_logger,               
-        accelerator='auto'
+        logger=[comet_logger,csv_logger],               
+        accelerator='auto',
+        callbacks=[checkpoint_callback]
     )
     
     # data = get_data(cfg.dataset.root,cfg.dataset.name,cfg.model.input_representation,cfg.dataset.use_gt)    
-    data = get_data("./TrainingData",cfg.dataset.name,cfg.model.input_representation,cfg.dataset.use_gt)    
+    data_path = get_data_path("./TrainingData",cfg.dataset.name,cfg.model.input_representation,cfg.dataset.use_gt)    
 
     loader_settings = {
         "batch_size":cfg.train.batch_size,
@@ -132,7 +144,7 @@ if __name__ == "__main__":
 
     # train_loader,test_loader,val_loader = get_dataloaders(cfg,device)
 
-    train_loader,test_loader,val_loader = new_get_dataloaders(data=data,
+    train_loader,test_loader,val_loader = new_get_dataloaders(data_path=data_path,
                                                           target=cfg.model.target,
                                                           input_representation=cfg.model.input_representation,
                                                           test_ids=test_ids,

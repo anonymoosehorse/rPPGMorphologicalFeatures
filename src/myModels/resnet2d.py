@@ -3,7 +3,7 @@ from torch import nn
 from torch.nn import functional as F
 import torchvision.models as models
 import ssl
-import config
+# import config
 import numpy as np
 import cv2
 from PIL import Image
@@ -16,7 +16,7 @@ Backbone CNN for RhythmNet model is a RestNet-18
 
 
 class Resnet2D(nn.Module):
-    def __init__(self, data_dim):
+    def __init__(self, data_dim,use_yuv=False):
         super(Resnet2D, self).__init__()
 
         resnet = models.resnet18(pretrained=False)
@@ -24,7 +24,7 @@ class Resnet2D(nn.Module):
             resnet.conv1 = nn.Conv2d(2, 64, kernel_size=7, stride=2, padding=3,
                                     bias=False)
         elif data_dim == '3d':
-            if config.USE_YUV:
+            if use_yuv:
                 resnet.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
                                          bias=False)
             else:

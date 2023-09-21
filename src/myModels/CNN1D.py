@@ -2,7 +2,7 @@ import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
 import numpy as np
-import config
+# import config
 
 class CNN1D(nn.Module):
 

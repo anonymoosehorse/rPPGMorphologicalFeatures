@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 
-import config
+# import config
 
 '''
 Backbone CNN for CWTNet model is a DeIT
@@ -11,7 +11,7 @@ Backbone CNN for CWTNet model is a DeIT
 
 
 class CWTNet2(nn.Module):
-    def __init__(self, model, data_dim):
+    def __init__(self, model, data_dim,use_yuv=False):
         super(CWTNet2, self).__init__()
         self.transformer = torch.hub.load('facebookresearch/deit:main', 'deit_base_patch16_224', pretrained=True, source='github')
         #else:
@@ -20,7 +20,7 @@ class CWTNet2(nn.Module):
         if data_dim == '2d':
             self.transformer.patch_embed.proj = nn.Conv2d(2, 768, kernel_size=(16, 16), stride=(16, 16))
         elif data_dim == '3d':
-            if config.USE_YUV:
+            if use_yuv:
                 self.transformer.patch_embed.proj = nn.Conv2d(3, 768, kernel_size=(16, 16), stride=(16, 16))
             else:
                 self.transformer.patch_embed.proj = nn.Conv2d(1, 768, kernel_size=(16, 16), stride=(16, 16))
