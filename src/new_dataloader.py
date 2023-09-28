@@ -11,6 +11,7 @@ from constants import DataFoldsNew
 from my_utils.signal_processing import pos,pos_img
 from sklearn.preprocessing import minmax_scale
 import h5py
+import pandas as pd
 
 # class Dataset1D(Dataset):
 #     def __init__(self,trace_data,target,device):
@@ -150,11 +151,21 @@ class DatasetIBIS(Dataset):
             split_target = tmp_data[name][self.target][split_idx_idx]
         
         split_data = pos_img(split_data)
+        if np.isnan(split_data).any().item():
+            print(f"Interpolating {np.count_nonzero(np.isnan(split_data))} Nan values")
+            split_data = pd.DataFrame(split_data).interpolate(
+                method='linear',
+                limit_direction='both',
+                axis=0).to_numpy()
         split_data = minmax_scale(split_data,feature_range=(0,1))
         split_data = torch.from_numpy(split_data).to(self.device)
         split_data = split_data.unsqueeze(0)
         split_data = F.interpolate(split_data.unsqueeze(0),(224,224)).squeeze(0)
         split_data = split_data.float()
+
+        if torch.isnan(split_data).cpu().any().item():
+            print()
+
                 
         split_target = torch.tensor(split_target).to(self.device)
         split_target = split_target.float()

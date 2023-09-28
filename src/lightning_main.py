@@ -10,6 +10,8 @@ from new_dataloader import get_dataloaders as new_get_dataloaders
 from new_dataloader import get_data_path,get_name_to_id_func
 from omegaconf import OmegaConf
 from constants import DataFoldsNew
+from pathlib import Path
+import pandas as pd
 
 
 class Runner(pl.LightningModule):
@@ -54,7 +56,7 @@ class Runner(pl.LightningModule):
         self.train_mae(y_hat, y.view(y_hat.shape))
 
         # Log step-level loss & accuracy
-        self.log("train/loss_step", loss)
+        self.log("train/loss_step", loss,batch_size=self.cfg.train.batch_size)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -62,7 +64,7 @@ class Runner(pl.LightningModule):
         self.val_mae(y_hat, y.view(y_hat.shape))
 
         # Log step-level loss & accuracy
-        self.log("val/loss_step", loss)
+        self.log("val/loss_step", loss,batch_size=self.cfg.train.batch_size)
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -70,18 +72,20 @@ class Runner(pl.LightningModule):
         self.test_mae(y_hat, y.view(y_hat.shape))
 
         # Log test loss
-        self.log("test/loss_step", loss)
-        self.log("test/loss_step"+f"/{batch['name']}", loss)
+        self.log("test/loss_step", loss,batch_size=self.cfg.train.batch_size)
+        for i,name in enumerate(batch['name']):
+            self.log("test/target"+f"/{name}", y[i].detach().cpu(),batch_size=self.cfg.train.batch_size)
+            self.log("test/pred"+f"/{name}", y_hat.flatten()[i].detach().cpu(),batch_size=self.cfg.train.batch_size)
         return loss
 
     def on_train_epoch_end(self):
         # Log the epoch-level training accuracy
-        self.log('train/MAE', self.train_mae.compute())
+        self.log('train-MAE', self.train_mae.compute())
         self.train_mae.reset()
 
     def on_validation_epoch_end(self):
         # Log the epoch-level validation accuracy
-        self.log('val/MAE', self.val_mae.compute())
+        self.log('val-MAE', self.val_mae.compute())
         self.val_mae.reset()
 
 if __name__ == "__main__":
@@ -114,20 +118,25 @@ if __name__ == "__main__":
     
     runner = Runner(cfg, model)
 
+    checkpoint_dir = Path(__file__).parent.parent / 'model_checkpoints' / experiment_name
     # Create an instance of ModelCheckpoint
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        monitor='val/MAE',  # Metric to monitor for best performance
-        dirpath='model_checkpoints/' + experiment_name,  # Directory where checkpoints will be saved
-        filename=r'{epoch}-{val/MAE:.2f}',  # File name prefix for saved models
+        monitor='val-MAE',  # Metric to monitor for best performance
+        dirpath=checkpoint_dir,  # Directory where checkpoints will be saved
+        filename=r'{epoch}-{val-MAE:.2f}',  # File name prefix for saved models
         save_top_k=1,  # Save only the best model
         mode='min',  # 'min' or 'max' depending on the monitored metric
     )
+    if not checkpoint_dir.exists():
+        checkpoint_dir.mkdir(parents=True)
+    OmegaConf.save(cfg,checkpoint_dir / "config.yaml" )
 
     trainer = pl.Trainer(
         max_epochs=cfg.train.epochs,
         logger=[comet_logger,csv_logger],               
         accelerator='auto',
-        callbacks=[checkpoint_callback]
+        callbacks=[checkpoint_callback],
+        log_every_n_steps=2
     )
     
     # data = get_data(cfg.dataset.root,cfg.dataset.name,cfg.model.input_representation,cfg.dataset.use_gt)    
@@ -156,6 +165,20 @@ if __name__ == "__main__":
     
     trainer.fit(runner, train_loader, test_loader)
 
+    ## Load model with the lowest validation score
+    checkpoint_path = list(checkpoint_dir.glob('*.ckpt'))[0]
+    print(f"Using Checkpoint file {checkpoint_path} for testing")
+
     # Test (if test dataset is implemented)
     if val_loader is not None:
-        trainer.test(runner, val_loader)
+        test_results = trainer.test(runner,ckpt_path=checkpoint_path, dataloaders=val_loader)
+        
+        test_df = pd.DataFrame(test_results).T.reset_index().iloc[1:]
+        test_df[['Set','Type','ID']] = test_df['index'].str.split("/",expand=True)
+        test_df = test_df.drop(columns=['index']).rename(columns={0:'value'})
+        test_df['Target'] = cfg.model.target
+        test_df['Model'] = cfg.model.name
+        test_df['InptRep'] = cfg.model.input_representation
+        test_df['Dataset'] = cfg.dataset.name        
+        test_df['GT'] = int(cfg.dataset.use_gt)
+        test_df.to_csv(checkpoint_dir / "TestResults.csv",index=False)
