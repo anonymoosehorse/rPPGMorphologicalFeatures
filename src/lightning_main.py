@@ -115,7 +115,7 @@ if __name__ == "__main__":
 
     comet_logger = CometLogger(**cfg.comet) 
     comet_logger.log_hyperparams(OmegaConf.to_container(cfg,resolve=True))
-    experiment_name = comet_logger.experiment.name
+    experiment_name = cfg.comet.project_name + "/" + comet_logger.experiment.name
     csv_logger = CSVLogger("csv_logs",name=experiment_name)
 
     model = get_model(cfg.model.name,cfg.model.data_dim)
