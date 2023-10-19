@@ -11,6 +11,8 @@ data_dim_dict={
 
 script_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_feature_estimation\src\lightning_main.py")
 
+cmd_list = []
+
 for dataset in ['vicar','vipl']:
     for use_gt in [True,False]:
         for network in ['transformer1d','resnet1d','resnet2d','transformer2d']:
@@ -52,17 +54,20 @@ for dataset in ['vicar','vipl']:
                         f"dataset.use_gt={use_gt}"
                     ]
 
-                    print(cmd)
-                    subprocess.run(cmd)
-                    # if not use_gt:
-                    #     for fold_nr in range(n_folds):
-                    #         fold_cmd = cmd + [f"dataset.fold_number={fold_nr}"]
-                    #         print(fold_cmd)
-                    #         subprocess.run(fold_cmd)                            
-                    # else:
-                    #     print(cmd)
-                    #     subprocess.run(cmd)
+
+                    # print(cmd)
+                    # subprocess.run(cmd)
+                    if not use_gt:
+                        for fold_nr in range(n_folds):
+                            fold_cmd = cmd + [f"dataset.fold_number={fold_nr}"]
+                            print(fold_cmd)
+                            subprocess.run(fold_cmd)                            
+                            
+                    else:
+                        print(cmd)
+                        subprocess.run(cmd)
                         
+
                         
 
 

@@ -5,7 +5,7 @@ from PIL import Image
 from PIL import ImageFile
 from torch.utils.data import Dataset
 
-import config
+#import config
 from constants import DatasetStats
 from utils.file_io import read_target_data, get_hr_data, get_hr_data_stmaps, get_hr_data_filtered
 import torch.nn.functional as F

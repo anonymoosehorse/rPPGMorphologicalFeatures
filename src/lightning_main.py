@@ -39,6 +39,11 @@ class Runner(pl.LightningModule):
             optimizer = torch.optim.SGD(self.model.parameters(), lr=self.cfg.optimize.lr)
         else:
             raise NotImplementedError(f"Optimizer {self.cfg.optimizer}")
+        
+        if self.cfg.optimize.scheduler:
+            scheduler = getattr(torch.optim.lr_scheduler,self.cfg.optimize.scheduler)(optimizer, **self.cfg.optimize.scheduler_settings)
+            return {"optimizer":optimizer,"scheduler":scheduler,"metric":"train-MAE"}
+        
         return optimizer
 
     def _step(self, batch):        
@@ -119,6 +124,8 @@ if __name__ == "__main__":
     runner = Runner(cfg, model)
 
     checkpoint_dir = Path(__file__).parent.parent / 'model_checkpoints' / experiment_name
+
+    training_callbacks = []
     # Create an instance of ModelCheckpoint
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         monitor='val-MAE',  # Metric to monitor for best performance
@@ -131,11 +138,22 @@ if __name__ == "__main__":
         checkpoint_dir.mkdir(parents=True)
     OmegaConf.save(cfg,checkpoint_dir / "config.yaml" )
 
+    training_callbacks.append(checkpoint_callback)
+
+    if cfg.train.early_stopping:
+        early_stopping_cb = pl.callbacks.EarlyStopping(
+            monitor="val-MAE",
+            min_delta=0.01,
+            patience=3,
+            mode='min'
+        )
+        training_callbacks.append(early_stopping_cb)
+
     trainer = pl.Trainer(
         max_epochs=cfg.train.epochs,
         logger=[comet_logger,csv_logger],               
         accelerator='auto',
-        callbacks=[checkpoint_callback],
+        callbacks=training_callbacks,
         log_every_n_steps=2
     )
     

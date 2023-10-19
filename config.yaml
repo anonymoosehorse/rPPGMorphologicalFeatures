@@ -2,16 +2,28 @@ seed: 0
 optimize:
   optimizer: Adam
   lr: 0.001
+  scheduler: ReduceLROnPlateau
+  scheduler_settings:
+    mode: min
+    factor: 0.1
+    patience: 3
 train:
-  epochs: 5
+  epochs: 1
   batch_size: 1
+  early_stopping: true
+  early_stopping_settings:
+      monitor: val-MAE
+      min_delta: 0.01
+      patience: 5
+      mode:  min
 model:
-  name: transformer1d #resnet2d #resnet1d #resnet2d #transformer1d #
-  data_dim: 1d #1d #2d #2d #1d #3d #1d
-  input_representation: traces #cwt #cwt #traces #ibis #traces #cwt, ibis
+model:
+  name: resnet2d #transformer1d #resnet2d #resnet1d #resnet2d #transformer1d #
+  data_dim: 3d #1d #2d #2d #1d #3d #1d
+  input_representation: ibis #traces #cwt #cwt #traces #ibis #traces #cwt, ibis
   target: HR #AUP # RT,PWA,HR
 dataset:
-  name: vicar #vipl  
+  name: vipl #vicar #vipl  
   root: ./TrainingData #./OutputFolder/data # ./TrainingData
   num_workers: 1
   fold_number: 0
