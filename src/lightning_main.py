@@ -14,6 +14,7 @@ from pathlib import Path
 import pandas as pd
 
 
+
 class Runner(pl.LightningModule):
     def __init__(self, cfg, model):
         super().__init__()
@@ -23,7 +24,7 @@ class Runner(pl.LightningModule):
         
         self.train_mae = torchmetrics.MeanAbsoluteError()        
         self.val_mae = torchmetrics.MeanAbsoluteError()        
-        self.test_mae = torchmetrics.MeanAbsoluteError()  
+        self.test_mae = torchmetrics.MeanAbsoluteError() 
         # self.automatic_optimization = True      
         
 
@@ -51,8 +52,11 @@ class Runner(pl.LightningModule):
         # targets = torch.stack(tuple(data['target'] for data in batch))
         inputs = batch['data']
         targets = batch['target']
+        if torch.isclose(targets,torch.tensor(0).float()).any():
+            print(f"Empty target detected in {batch['name']}")
         outputs = self.model(inputs)
         loss = self.loss_fn(outputs, targets.view(outputs.shape))
+
         return loss, targets, outputs
         
 
@@ -61,7 +65,7 @@ class Runner(pl.LightningModule):
         self.train_mae(y_hat, y.view(y_hat.shape))
 
         # Log step-level loss & accuracy
-        self.log("train/loss_step", loss,batch_size=self.cfg.train.batch_size)
+        self.log("train/loss_step", loss,batch_size=self.cfg.train.batch_size)        
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -85,7 +89,7 @@ class Runner(pl.LightningModule):
 
     def on_train_epoch_end(self):
         # Log the epoch-level training accuracy
-        self.log('train-MAE', self.train_mae.compute())
+        self.log('train-MAE', self.train_mae.compute())        
         self.train_mae.reset()
 
     def on_validation_epoch_end(self):
@@ -149,6 +153,8 @@ if __name__ == "__main__":
         )
         training_callbacks.append(early_stopping_cb)
 
+    training_callbacks.append(pl.callbacks.LearningRateMonitor(logging_interval="step"))
+
     trainer = pl.Trainer(
         max_epochs=cfg.train.epochs,
         logger=[comet_logger,csv_logger],               
@@ -199,4 +205,5 @@ if __name__ == "__main__":
         test_df['InptRep'] = cfg.model.input_representation
         test_df['Dataset'] = cfg.dataset.name        
         test_df['GT'] = int(cfg.dataset.use_gt)
+        test_df['Fold'] = int(cfg.dataset.fold_number)
         test_df.to_csv(checkpoint_dir / "TestResults.csv",index=False)
