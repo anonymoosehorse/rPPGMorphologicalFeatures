@@ -164,7 +164,8 @@ class DatasetIBIS(Dataset):
         split_data = split_data.float()
 
         if torch.isnan(split_data).cpu().any().item():
-            print()
+            print("Replacing NaN data with 0")
+            split_data = torch.nan_to_num(split_data,0)
 
                 
         split_target = torch.tensor(split_target).to(self.device)
