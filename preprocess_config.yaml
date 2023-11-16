@@ -1,4 +1,4 @@
 use_gt: False
 use_stride: False
-dataset_to_run: vipl #vipl #'vicar'
+dataset_to_run: vipl #vipl 
 output_directory: 'TrainingData'
