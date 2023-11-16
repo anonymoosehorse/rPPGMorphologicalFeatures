@@ -13,7 +13,8 @@ script_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_fea
 
 cmd_list = []
 
-for dataset in ['vicar','vipl']:
+# for dataset in ['vicar','vipl']:
+for dataset in ['vipl']:
     for use_gt in [True,False]:
         for network in ['transformer1d','resnet1d','resnet2d','transformer2d']:
             for representation in ["cwt", "traces", "ibis"]:
@@ -30,7 +31,7 @@ for dataset in ['vicar','vipl']:
                     if use_gt and representation == 'ibis':
                         continue
 
-                    batch_size = 32
+                    batch_size = 8
                     if network == 'resnet1d':
                         batch_size = 1
 
@@ -40,7 +41,7 @@ for dataset in ['vicar','vipl']:
                         epochs = 60    
 
                     ##HACK: To test if everything is running smooth just train two epochs
-                    epochs = 30
+                    epochs = 2
                     
                     cmd = [
                         r"python",str(script_path),
@@ -55,17 +56,17 @@ for dataset in ['vicar','vipl']:
                     ]
 
 
-                    # print(cmd)
-                    # subprocess.run(cmd)
-                    if not use_gt:
-                        for fold_nr in range(n_folds):
-                            fold_cmd = cmd + [f"dataset.fold_number={fold_nr}"]
-                            print(fold_cmd)
-                            subprocess.run(fold_cmd)                            
+                    print(cmd)
+                    subprocess.run(cmd)
+                    # if not use_gt:
+                    #     for fold_nr in range(n_folds):
+                    #         fold_cmd = cmd + [f"dataset.fold_number={fold_nr}"]
+                    #         print(fold_cmd)
+                    #         subprocess.run(fold_cmd)                            
                             
-                    else:
-                        print(cmd)
-                        subprocess.run(cmd)
+                    # else:
+                    #     print(cmd)
+                    #     subprocess.run(cmd)
                         
 
                         

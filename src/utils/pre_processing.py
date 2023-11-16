@@ -1,17 +1,11 @@
-from pathlib import Path
-#import config
-from my_utils.extract_signal import extract_signal,extract_signal_stmap
-# from my_utils.split_signals import split_signal2
-from my_utils.generate_fold import generate_fold
 import numpy as np
-from my_utils.signal_processing import pos,butter_lowpass_filter,detect_peaks
+from .signal_processing import pos,butter_lowpass_filter,detect_peaks,signal_to_cwt
 import json
 import h5py
 import torch.nn.functional as F
 from torchvision.transforms import ToTensor
 from tqdm import tqdm
-import pickle as pkl
-from omegaconf import OmegaConf
+
 
 def get_data_from_json(json_path):
     with open(json_path, 'r') as f:
@@ -103,7 +97,7 @@ def get_wave_properties(signal, signal_times,peak_idcs,valley_idcs,fps):
         properties_dict['HR'].append(hr)
     return properties_dict
 
-def create_splits(signal_dict,gt_dict,extrema_dict,fps,window_time_s=10):
+def create_splits(signal_dict,gt_dict,extrema_dict,fps,gt_fps,window_time_s=10):
 
     matched_splits = {}
     for name, data in tqdm(signal_dict.items()):
@@ -161,7 +155,7 @@ def remove_faulty_splits(splits):
                     data[key].pop(idx)
     return splits
 
-from my_utils.signal_processing import signal_to_cwt
+
 
 def create_cwt(splits):
     cwt_dataset = {}
@@ -174,115 +168,3 @@ def create_cwt(splits):
         cwt_dataset[name]['SplitData'] = cwt_list
 
     return cwt_dataset
-
-if __name__ == '__main__':
-    cfg = OmegaConf.load('conversion_config.yaml')     
-    cmd_cfg = OmegaConf.from_cli()
-    cfg = OmegaConf.merge(cfg, cmd_cfg)
-
-    data_cfg = OmegaConf.load('dataset_config.yaml')
-    data_cfg = data_cfg[cfg.dataset_to_run]
-
-    traces_path = Path(data_cfg.traces_path)
-    fps = data_cfg.traces_fps
-
-    use_gt = cfg.use_gt
-    use_stride = cfg.use_stride
-
-    dataset = cfg.dataset_to_run
-    gt_path = Path(data_cfg.gt_path)
-    gt_fps = data_cfg.gt_fps
-
-    ## Create the output path for the generated data
-    train_data_path = Path.cwd() / cfg['output_directory'] / dataset
-    train_data_path.mkdir(exist_ok=True,parents=True)
-
-    print("Loading traces data filter and resample...", end=" ")
-    if not use_gt:
-        signal_dict =  read_and_process(traces_path,fps)            
-        
-        if fps != 30:
-            signal_dict = resample_data(signal_dict,fps,30)
-            fps = 30
-    print("Done")
-
-    print("Loading Ground Truth signal data...", end=" ")
-    if dataset == "vicar":
-        load_func = read_h5        
-    elif dataset == "vipl":
-        load_func = read_numpy    
-    
-    gt_sig_dict = read_gt_data(gt_path,gt_fps,load_func)
-
-    if use_gt:
-        signal_dict = resample_data(gt_sig_dict,gt_fps,30)
-        fps = 30
-    print("Done")
-    
-    print("Split data, calculate features and clean ...", end=" ")
-
-    extrema_dict = detect_extrema_to_dict(gt_sig_dict)
-    
-    splits = create_splits(signal_dict,gt_sig_dict,extrema_dict,fps=fps)
-
-    for name,data in splits.items():
-        if dataset == 'vicar':
-            data['AUP'] = list(((np.array(data['AUP'])*1000) / 30 - 10818) / 54595)
-            data['PWA'] = list(np.array(data['PWA']) / 54595)
-        else:
-            data['AUP'] = list((np.array(data['AUP'])*1000) / 30)
-
-    splits = remove_faulty_splits(splits)
-    
-    print("Done")    
-
-    suffix = "_gt" if use_gt else ""
-
-    print("Save traces training data ...",end=" ")
-    with h5py.File(train_data_path / f"traces_data{suffix}.h5", 'w') as hf:
-        for name,data in splits.items():
-            group = hf.create_group(name)
-            for key,sub_splits in data.items():
-                group.create_dataset(key,data=sub_splits)
-    print("Done")
-
-    # print("Save traces training data ...",end=" ")
-    # with open(train_data_path / f"traces_data{suffix}.pkl",'wb') as f:
-    #     pkl.dump(splits,f)
-    # print("Done")
-
-    print("Generate CWT data",end=' ')
-    cwt_data = create_cwt(splits)
-    print("Done")
-
-    # print("Save CWT training data ...",end=" ")
-    # with open(train_data_path / f"cwt_data{suffix}.pkl",'wb') as f:
-    #     pkl.dump(cwt_data,f)
-    # print("Done")
-
-    print("Save CWT training data ...",end=" ")
-    with h5py.File(train_data_path / f"cwt_data{suffix}.h5", 'w') as hf:
-        for name,data in cwt_data.items():
-            group = hf.create_group(name)
-            for key,sub_splits in data.items():
-                group.create_dataset(key,data=sub_splits)
-    print("Done")
-    
-    
-    # correct_bpm(hr_save_path)
-    # plot_bpms(hr_save_path)
-    # split_stmap(signal_path, gt_path, signal_save_path, dataset, use_stride=use_stride)
-    # split_signal(signal_path, 10, signal_save_path, signal_save_path)
-    # split_signal2(signal_path, gt_path, signal_save_path, dataset, use_gt=use_gt, use_stride=use_stride)
-    # split_signal_time(signal_path, peaks_path, signal_save_path, hr_save_path, t)
-    # split_signal_noisy(signal_path, peaks_path, signal_save_path, hr_save_path, signal_length, delay)
-    # show_peaks(signal_path, peaks_path)
-
-
-    # dataset = "vipl"
-    # data_path = f"/tudelft.net/staff-umbrella/StudentsCVlab/rsangers/data/{dataset}/split_stmaps3/"
-
-    # # generate_fold_cwt(data_path, dataset)
-    # # generate_fold_1D(data_path, dataset)
-    # # generate_fold_simulated(config.SPLIT_CWT)
-    # generate_fold_stmaps(data_path, dataset)

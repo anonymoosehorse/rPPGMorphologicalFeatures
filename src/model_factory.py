@@ -1,10 +1,8 @@
-from myModels.CWTNet import CWTNet
-from myModels.CWTNet2 import CWTNet2
-from myModels.TransformerModel import TransformerModel, NoamOpt
-from myModels.CNN1D import CNN1D
-from myModels.resnet1d import ResNet1D
-from myModels.resnet2d import Resnet2D
-
+# from models.CWTNet2 import CWTNet2
+# from models.TransformerModel import TransformerModel
+# from models.resnet1d import ResNet1D
+# from models.resnet2d import Resnet2D
+from models import CWTNet2,TransformerModel,ResNet1D,Resnet2D
 
 def get_model(model_name: str,data_dimensions,norm_factor = 1):
 

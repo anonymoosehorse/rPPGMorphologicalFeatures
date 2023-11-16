@@ -5,14 +5,12 @@ import torch.nn as nn
 import torch
 from pytorch_lightning.loggers import CometLogger, CSVLogger
 from model_factory import get_model
-# from dataloader_factory import get_dataloaders
-from new_dataloader import get_dataloaders as new_get_dataloaders
-from new_dataloader import get_data_path,get_name_to_id_func
+from dataloader_factory import get_dataloaders
+from dataloader_factory import get_data_path,get_name_to_id_func
 from omegaconf import OmegaConf
 from constants import DataFoldsNew
 from pathlib import Path
 import pandas as pd
-
 
 
 class Runner(pl.LightningModule):
@@ -52,6 +50,7 @@ class Runner(pl.LightningModule):
         # targets = torch.stack(tuple(data['target'] for data in batch))
         inputs = batch['data']
         targets = batch['target']
+        print(targets)
         if torch.isclose(targets,torch.tensor(0).float()).any():
             print(f"Empty target detected in {batch['name']}")
         outputs = self.model(inputs)
@@ -97,18 +96,60 @@ class Runner(pl.LightningModule):
         self.log('val-MAE', self.val_mae.compute())
         self.val_mae.reset()
 
+def config_exists_in_project(cfg):
+    cfgs_in_project = list((Path("model_checkpoints") / cfg.comet.project_name).rglob("*.yaml"))
+    containered_cfg = OmegaConf.to_container(cfg,resolve=True)
+    for cfg_path in cfgs_in_project:
+        test_cfg = OmegaConf.load(cfg_path)
+        if containered_cfg == OmegaConf.to_container(test_cfg,resolve=True):
+            return True
+        
+    return False
+
+def initialize_callbacks(cfg,checkpoint_dir):
+    training_callbacks = []
+    
+    # Create an instance of ModelCheckpoint
+    checkpoint_callback = pl.callbacks.ModelCheckpoint(
+        monitor='val-MAE',  # Metric to monitor for best performance
+        dirpath=checkpoint_dir,  # Directory where checkpoints will be saved
+        filename=r'{epoch}-{val-MAE:.2f}',  # File name prefix for saved models
+        save_top_k=1,  # Save only the best model
+        mode='min',  # 'min' or 'max' depending on the monitored metric
+    )
+
+    training_callbacks.append(checkpoint_callback)
+
+    if cfg.train.early_stopping:
+        
+        # early_stopping_cb = pl.callbacks.EarlyStopping(
+        #     monitor="val-MAE",
+        #     min_delta=0.01,
+        #     patience=3,
+        #     mode='min'
+        # )
+        early_stopping_cb = pl.callbacks.EarlyStopping(
+            **cfg.train.early_stopping_settings
+        )
+        training_callbacks.append(early_stopping_cb)
+
+    training_callbacks.append(pl.callbacks.LearningRateMonitor(logging_interval="step"))
+
+    return training_callbacks
+
 if __name__ == "__main__":
 
     # Load defaults and overwrite by command-line arguments
     cfg = OmegaConf.load("x_config.yaml")
     cmd_cfg = OmegaConf.from_cli()
     cfg = OmegaConf.merge(cfg, cmd_cfg)
+
+    if config_exists_in_project(cfg):
+        print("This analysis has already been done exiting")
+        exit()
     
     print("Training Configuration")
     print(OmegaConf.to_yaml(cfg))
-
-    ds_cfg = OmegaConf.load("dataset_config.yaml")
-    ds_cfg = ds_cfg[cfg.dataset.name]
 
     device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
     print(f"Using device: {device}")
@@ -128,32 +169,13 @@ if __name__ == "__main__":
     runner = Runner(cfg, model)
 
     checkpoint_dir = Path(__file__).parent.parent / 'model_checkpoints' / experiment_name
-
-    training_callbacks = []
-    # Create an instance of ModelCheckpoint
-    checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        monitor='val-MAE',  # Metric to monitor for best performance
-        dirpath=checkpoint_dir,  # Directory where checkpoints will be saved
-        filename=r'{epoch}-{val-MAE:.2f}',  # File name prefix for saved models
-        save_top_k=1,  # Save only the best model
-        mode='min',  # 'min' or 'max' depending on the monitored metric
-    )
+    
     if not checkpoint_dir.exists():
         checkpoint_dir.mkdir(parents=True)
+
     OmegaConf.save(cfg,checkpoint_dir / "config.yaml" )
 
-    training_callbacks.append(checkpoint_callback)
-
-    if cfg.train.early_stopping:
-        early_stopping_cb = pl.callbacks.EarlyStopping(
-            monitor="val-MAE",
-            min_delta=0.01,
-            patience=3,
-            mode='min'
-        )
-        training_callbacks.append(early_stopping_cb)
-
-    training_callbacks.append(pl.callbacks.LearningRateMonitor(logging_interval="step"))
+    training_callbacks = initialize_callbacks(cfg,checkpoint_dir=checkpoint_dir)
 
     trainer = pl.Trainer(
         max_epochs=cfg.train.epochs,
@@ -164,7 +186,7 @@ if __name__ == "__main__":
     )
     
     # data = get_data(cfg.dataset.root,cfg.dataset.name,cfg.model.input_representation,cfg.dataset.use_gt)    
-    data_path = get_data_path("./TrainingData",cfg.dataset.name,cfg.model.input_representation,cfg.dataset.use_gt)    
+    data_path = get_data_path(cfg.dataset.root,cfg.dataset.name,cfg.model.input_representation,cfg.dataset.use_gt)    
 
     loader_settings = {
         "batch_size":cfg.train.batch_size,
@@ -177,7 +199,7 @@ if __name__ == "__main__":
 
     # train_loader,test_loader,val_loader = get_dataloaders(cfg,device)
 
-    train_loader,test_loader,val_loader = new_get_dataloaders(data_path=data_path,
+    train_loader,test_loader,val_loader = get_dataloaders(data_path=data_path,
                                                           target=cfg.model.target,
                                                           input_representation=cfg.model.input_representation,
                                                           test_ids=test_ids,
@@ -185,8 +207,8 @@ if __name__ == "__main__":
                                                           device=device,
                                                           name_to_id_func=get_name_to_id_func(cfg.dataset.name),
                                                           **loader_settings)
-    
-    
+
+
     trainer.fit(runner, train_loader, test_loader)
 
     ## Load model with the lowest validation score
