@@ -6,6 +6,7 @@ import h5py
 from tqdm import tqdm
 import cv2
 import argparse
+from omegaconf import OmegaConf
 
 def get_vid_length(vid_path):
     """
@@ -61,31 +62,31 @@ def read_all_data_in_path(data_path):
 
 
 def main():
-    """Anonymize the images of a given real dataset.
+    """Combine single traces files created by the IBIS_temporal method into a single hdf.
 
     Options:
         -v, --verbose   : set verbose mode on
-        --dataset-name        : name of the dataset file
+        --dataset             : name of the dataset (vicar or vipl)
         --ibis-datapath       : path to the ibis data
         --check-validity      : flag to check if IBIS traces match the length of the original videos
-        --datapath            : path to the dataset
-        --video-suffix        : suffix of the video files
-    
     """
 
     parser = argparse.ArgumentParser("IBIS data cleaner")
     parser.add_argument('-v', '--verbose', action='store_true', help="verbose mode on")
+    parser.add_argument('--dataset', type=str, default='vicar',choice=('vicar','vipl'), help='Dataset to use (vicar or vipl)')
     parser.add_argument('--ibis-datapath', type=str, required=True, help="choose the path to ibis data")
     parser.add_argument('--check-validity', action='store_true', required=True, help="choose the path to ibis data")
-    parser.add_argument('--datapath', type=str, help="set dataset root directory")
-    parser.add_argument('--video-suffix', type=str,default=".avi", help="give the suffix of the video data")    
-    parser.add_argument('--dataset-name', type=str, default='UnknownDataset', help="Name of the created hdf file, provide an existing name to append to an existing file")
     
     # Parse given arguments
     args = parser.parse_args()
 
+    data_cfg = OmegaConf.load('x_dataset_config.yaml')
+    data_cfg = data_cfg[args.dataset]
+
+    #### Check paths
+
     ## Check if we have a path to the real dataset for checking length
-    if args.datapath is None and args.check_validity:
+    if data_cfg.dataset_path is None and args.check_validity:
         print("Please provide a path to the dataset")
         exit()
 
@@ -95,15 +96,17 @@ def main():
     
     dataset_path = None
     if args.check_validity:
-        dataset_path = Path(args.datapath)
+        dataset_path = Path(data_cfg.dataset_path)
         if not dataset_path.exists():
             raise FileExistsError(f"Cannot find path {dataset_path}")    
 
-    if next(ibis_data_path.rglob("*" + args.video_suffix)) is None:
+    if next(ibis_data_path.rglob("*" + data_cfg.video_suffix)) is None:
         print("Found no data files")
         exit()
 
-    h5_outfile = Path.cwd() / f"{args.dataset_name}.h5"
+    #### Create hdf file
+
+    h5_outfile = Path.cwd() / f"{args.dataset_name}_ibis_combined.h5"
     if h5_outfile.exists():    
         hf = h5py.File(h5_outfile,'a')
     else:
@@ -112,12 +115,12 @@ def main():
     ## Match names
     if args.check_validity:
         print("Generating video lookup table ...")
-        video_lookup = {vid_path.name:vid_path for vid_path in tqdm(dataset_path.rglob("*" + args.video_suffix))}
+        video_lookup = {vid_path.name:vid_path for vid_path in tqdm(dataset_path.rglob("*" + data_cfg.video_suffix))}
 
     if args.verbose:
         print("Combining in hdf file")
 
-    for out_folder_path in tqdm(ibis_data_path.rglob("*" + args.video_suffix)):        
+    for out_folder_path in tqdm(ibis_data_path.rglob("*" + data_cfg.video_suffix)):        
 
         name = out_folder_path.stem
         

@@ -34,5 +34,17 @@
                 "--datapath=D:\\VIPL",
                 "--video-suffix=.avi"]
         }
+        {
+            "name": "Python: IBIS preprocess",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args":[
+                "--dataset=vipl",
+                "--ibis-path=D:\\Projects\\Waveform\\Code\\AlternativeRubenCode\\waveform_feature_estimation\\All_IBIS_data.h5"
+                ]
+        }
     ]
 }
