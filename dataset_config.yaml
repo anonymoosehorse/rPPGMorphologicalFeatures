@@ -1,16 +1,16 @@
 vicar:
-  traces_path: D:\Projects\Waveform\Data\VicarPPGBeyond\SkinpixelFiles\FaceReader9beta2Mask
-  traces_fps: 30
-  gt_path: D:\Projects\Waveform\Data\VicarPPGBeyond\cleanedSignals
-  gt_fps: 500
-  gt_type: h5py
-  test_ids: [6, 8] 
-  val_ids: [1, 10]
+  traces_path: # Path to your dataset traces
+  traces_fps: 30                          # Fps of the traces
+  gt_path: # Path to the ground truth data
+  gt_fps: 500                             # Fps of the ground truth data
+  gt_type: h5py                           # Type of the ground truth data (h5py, numpy)
+  test_ids: [6, 8]                        # Default Participant ids to use for testing
+  val_ids: [1, 10]                        # Default Participant ids to use for validation
 vipl:
-  traces_path: D:\Projects\Waveform\Data\VIPL\VIPL_traces
-  traces_fps: 25
-  gt_path: D:\Projects\Waveform\Data\VIPL\clean_hr
-  gt_fps: 60
-  gt_type: numpy
-  test_ids: [19, 62, 86, 67, 37, 77, 40, 7, 36, 100, 83, 89, 6, 45, 32, 22]
-  val_ids: [33, 97, 98, 69, 71, 103, 9, 59, 43, 12, 104, 50, 88, 90, 27, 61]
+  traces_path: # Path to your dataset traces
+  traces_fps: 25                                                             # Fps of the traces                         
+  gt_path: # Path to the ground truth data
+  gt_fps: 60                                                                 # Fps of the ground truth data
+  gt_type: numpy                                                             # Type of the ground truth data (h5py, numpy)
+  test_ids: [19, 62, 86, 67, 37, 77, 40, 7, 36, 100, 83, 89, 6, 45, 32, 22]  # Default Participant ids to use for testing
+  val_ids: [33, 97, 98, 69, 71, 103, 9, 59, 43, 12, 104, 50, 88, 90, 27, 61] # Default Participant ids to use for validation

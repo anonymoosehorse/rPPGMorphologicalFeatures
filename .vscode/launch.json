@@ -21,5 +21,18 @@
             "console": "integratedTerminal",
             "justMyCode": true
         }
+        {
+            "name": "Python: IBIS test",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args":["-v",
+                "--ibis-datapath=D:\\Projects\\Waveform\\Experiments\\IBIS_temporal\\build\\results\\mnt\\d\\VIPL",
+                "--check-validity",
+                "--datapath=D:\\VIPL",
+                "--video-suffix=.avi"]
+        }
     ]
 }

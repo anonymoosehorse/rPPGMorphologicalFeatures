@@ -35,7 +35,24 @@ Run the [preprocess.py](/src/preprocess.py) script to preprocess the datasets fo
 python ./src/preprocess.py
 ```
 
-<!-- ## IBIS trace generation -->
+## IBIS trace generation
+
+### Build IBIS
+Build the IBIS_Temporal using code and instructions provided at [IBIS_Temporal](https://github.com/xapha/IBIS_Temporal).
+
+(Tested in WSL2.0 running Ubuntu 22.04)
+
+**NOTE**: If running the code on a windows machine I would recommend using the WSL to generate the traces as the full path to the video will be recreated in the sudirectories of the method and WSL seems to have less problems with long paths compared to windows. 
+
+### Preprocess IBIS data
+
+To preprocess the generated ibis data fill in the arguments and run the following command:
+
+```bash
+python ./src/combine_ibis_output.py --dataset-name=NameOfTheDataset --ibis-datapath=path/to/your/generated/data --check-validity --datapath=path/to/the/dataset --video-suffix=.suffixOfVideofiles
+```
+
+This should create an HDF(.h5) file that with the name of your dataset.
 
 ## Training a network
 

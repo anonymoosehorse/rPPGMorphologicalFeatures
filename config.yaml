@@ -1,41 +1,38 @@
-seed: 0
+seed: 0                           # Seed of all experiments
 optimize:
-  optimizer: Adam
-  lr: 0.001
-  scheduler: ReduceLROnPlateau
-  scheduler_settings:
+  optimizer: Adam                 # Name of the optimizer
+  lr: 0.001                       # Learning rate
+  scheduler: ReduceLROnPlateau    # Name of the scheduler None/null for no scheduler
+  scheduler_settings:             # Scheduler settings
     mode: min
     factor: 0.1
     patience: 3
-train:
-  epochs: 1
-  batch_size: 1
-  early_stopping: true
-  early_stopping_settings:
+    threshold: 2
+    verbose: true
+train:                            # Training settings
+  epochs: 1                       # Number of epochs
+  batch_size: 16                  # Batch size
+  early_stopping: false           # Use Early stopping    
+  early_stopping_settings:        # Early stopping settings
       monitor: val-MAE
-      min_delta: 0.01
+      min_delta: 0.1
       patience: 5
       mode:  min
+      verbose: true
 model:
-model:
-  name: resnet2d #transformer1d #resnet2d #resnet1d #resnet2d #transformer1d #
-  data_dim: 3d #1d #2d #2d #1d #3d #1d
-  input_representation: ibis #traces #cwt #cwt #traces #ibis #traces #cwt, ibis
-  target: HR #AUP # RT,PWA,HR
+  name: transformer2d             # Model to use (resnet2d, resnet1d, transformer1d, transformer2d)
+  data_dim: 3d                    # Dimensions of input (1d, 2d, 3d)
+  input_representation: ibis      # Input Representation (cwt, traces, ibis)
+  target: HR                      # Prediction target (AUP, RT, PWA, HR)
 dataset:
-  name: vipl #vicar #vipl  
-  root: ./TrainingData #./OutputFolder/data # ./TrainingData
-  num_workers: 1
-  fold_number: 0
-  use_gt: false 
-  use_yuv: false
+  name: vicar                     # Dataset to use (vipl, vicar)
+  root: ./TrainingData            # Path to the preprocessed data
+  num_workers: 1                  # Number of workers for the dataloader
+  fold_number: 0                  # Number of the fold to use (defined in src/constatst.py)
+  use_gt: false                   # Use resampled ground truth data for training
+  use_yuv: false                  # (legacy) Use YUV data for training
 comet:
-  api_key: 
-  workspace: 
-  project_name: 
-# wandb:
-#   log: true
-#   dir: ./
-#   experiment_name: ''
-#   entity: ''
-#   project: ''
+  api_key: # Your comet api key
+  workspace: # Your comet workspace
+  project_name: # Your comet project name
+
