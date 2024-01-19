@@ -14,12 +14,12 @@ script_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_fea
 cmd_list = []
 
 # for dataset in ['vicar','vipl']:
-for dataset in ['vipl']:
+for dataset in ['vipl','vipl']:
     for use_gt in [True,False]:
-        for network in ['transformer1d','resnet1d','resnet2d','transformer2d']:
-            for representation in ["cwt", "traces", "ibis"]:
-                for target in ["AUP", "RT","PWA","HR"]:
-                    
+        for network in ['transformer1d','transformer2d','resnet1d','resnet2d']:
+            for representation in ["traces"]:
+                for target in ["AUP", "RT","PWA","HR"]:                                      
+
                     if network[-2:] == "1d" and representation != "traces":
                         continue
                     if network[-2:] == "2d" and representation == "traces":
@@ -41,7 +41,7 @@ for dataset in ['vipl']:
                         epochs = 60    
 
                     ##HACK: To test if everything is running smooth just train two epochs
-                    epochs = 2
+                    epochs = 2               
                     
                     cmd = [
                         r"python",str(script_path),

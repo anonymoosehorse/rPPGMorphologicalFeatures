@@ -7,6 +7,7 @@ from pytorch_lightning.loggers import CometLogger, CSVLogger
 from model_factory import get_model
 from dataloader_factory import get_dataloaders
 from dataloader_factory import get_data_path,get_name_to_id_func
+from models.PeakbasedDetector import PeakbasedDetector
 from omegaconf import OmegaConf
 from constants import DataFoldsNew
 from pathlib import Path
@@ -50,10 +51,14 @@ class Runner(pl.LightningModule):
         # targets = torch.stack(tuple(data['target'] for data in batch))
         inputs = batch['data']
         targets = batch['target']
+        time = batch['time']
         print(targets)
         if torch.isclose(targets,torch.tensor(0).float()).any():
             print(f"Empty target detected in {batch['name']}")
-        outputs = self.model(inputs)
+        if isinstance(self.model,PeakbasedDetector):
+            outputs = self.model(inputs,time)
+        else:
+            outputs = self.model(inputs)
         loss = self.loss_fn(outputs, targets.view(outputs.shape))
 
         return loss, targets, outputs
@@ -144,15 +149,18 @@ if __name__ == "__main__":
     cmd_cfg = OmegaConf.from_cli()
     cfg = OmegaConf.merge(cfg, cmd_cfg)
 
-    if config_exists_in_project(cfg):
-        print("This analysis has already been done exiting")
-        exit()
+    data_cfg = OmegaConf.load("x_dataset_config.yaml")
+    data_cfg = data_cfg[cfg.dataset.name]
+
+    # if config_exists_in_project(cfg):
+    #     print("This analysis has already been done exiting")
+    #     exit()
     
     print("Training Configuration")
     print(OmegaConf.to_yaml(cfg))
 
     device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
-    print(f"Using device: {device}")
+    print(f"Using device: {device}")    
 
     # Seed everything. Note that this does not make training entirely
     # deterministic.
@@ -163,7 +171,7 @@ if __name__ == "__main__":
     experiment_name = cfg.comet.project_name + "/" + comet_logger.experiment.name
     csv_logger = CSVLogger("csv_logs",name=experiment_name)
 
-    model = get_model(cfg.model.name,cfg.model.data_dim)
+    model = get_model(cfg.model.name,cfg.model.data_dim,data_cfg.traces_fps,cfg.model.target)
     model = model.to(device)
     
     runner = Runner(cfg, model)
@@ -207,16 +215,17 @@ if __name__ == "__main__":
                                                           device=device,
                                                           name_to_id_func=get_name_to_id_func(cfg.dataset.name),
                                                           **loader_settings)
+    checkpoint_path = None
+    if not cfg.model.name == "peakdetection1d":
+        trainer.fit(runner, train_loader, test_loader)
 
-
-    trainer.fit(runner, train_loader, test_loader)
-
-    ## Load model with the lowest validation score
-    checkpoint_path = list(checkpoint_dir.glob('*.ckpt'))[0]
-    print(f"Using Checkpoint file {checkpoint_path} for testing")
+    
+        ## Load model with the lowest validation score
+        checkpoint_path = list(checkpoint_dir.glob('*.ckpt'))[0]
+        print(f"Using Checkpoint file {checkpoint_path} for testing")
 
     # Test (if test dataset is implemented)
-    if val_loader is not None:
+    if val_loader is not None:        
         test_results = trainer.test(runner,ckpt_path=checkpoint_path, dataloaders=val_loader)
         
         test_df = pd.DataFrame(test_results).T.reset_index().iloc[1:]

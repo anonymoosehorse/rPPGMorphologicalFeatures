@@ -20,9 +20,9 @@ train:                            # Training settings
       mode:  min
       verbose: true
 model:
-  name: transformer2d             # Model to use (resnet2d, resnet1d, transformer1d, transformer2d)
-  data_dim: 3d                    # Dimensions of input (1d, 2d, 3d)
-  input_representation: ibis      # Input Representation (cwt, traces, ibis)
+  name: peakdetection1d            # Model to use (resnet2d, resnet1d, transformer1d, transformer2d)
+  data_dim: 1d                    # Dimensions of input (1d, 2d, 3d)
+  input_representation: traces    # Input Representation (cwt, traces, ibis)
   target: HR                      # Prediction target (AUP, RT, PWA, HR)
 dataset:
   name: vicar                     # Dataset to use (vipl, vicar)

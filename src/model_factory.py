@@ -2,9 +2,9 @@
 # from models.TransformerModel import TransformerModel
 # from models.resnet1d import ResNet1D
 # from models.resnet2d import Resnet2D
-from models import CWTNet2,TransformerModel,ResNet1D,Resnet2D
+from models import CWTNet2,TransformerModel,ResNet1D,Resnet2D,PeakbasedDetector
 
-def get_model(model_name: str,data_dimensions,norm_factor = 1):
+def get_model(model_name: str,data_dimensions,fps,target,norm_factor = 1):
 
 
     if model_name == 'resnet1d':
@@ -28,6 +28,8 @@ def get_model(model_name: str,data_dimensions,norm_factor = 1):
                                  norm_factor=norm_factor)
     elif model_name == 'transformer2d':
         model = CWTNet2(model_name, data_dimensions)
+    elif model_name == 'peakdetection1d':
+        model = PeakbasedDetector(target,fps)
     else:
         print("Invalid model type")
 

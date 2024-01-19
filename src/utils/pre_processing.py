@@ -5,7 +5,12 @@ import h5py
 import torch.nn.functional as F
 from torchvision.transforms import ToTensor
 from tqdm import tqdm
+import torch
+import pandas as pd
 
+
+def scale_to_range(value,old_min,old_max,new_min=0,new_max=1):
+    return ((new_max - new_min)*(value-old_min)/(old_max-old_min)) + new_min
 
 def get_data_from_json(json_path):
     with open(json_path, 'r') as f:
@@ -35,6 +40,18 @@ def read_and_process(traces_path,fps):
 def read_h5(h5_path):
     with h5py.File(h5_path, "r") as f:
         gt_data = np.array(f['data']['PPG'])
+    return gt_data
+
+def read_csv(csv_path):
+    gt_data = pd.read_csv(csv_path)
+    gt_data = gt_data['Signal'].to_numpy()
+    return gt_data
+
+def read_pure_json(json_path):
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+    gt_data = [data_point['Value']['waveform'] for data_point in data['/FullPackage']]
+    gt_data = np.array(gt_data, dtype=float)
     return gt_data
 
 def read_numpy(np_path):
@@ -79,8 +96,14 @@ def np_between(array,a,b):
         array = np.array(array)
     return np.logical_and(array >= a, array < b)
 
+def torch_between(array,a,b):
+    if not isinstance(array,torch.Tensor):
+        array = torch.tensor(array)
+    return torch.logical_and(array >= a, array < b)
+
 
 def get_wave_properties(signal, signal_times,peak_idcs,valley_idcs,fps):
+
     properties_dict = {"PeakIndex":[],"RT":[],"PWA":[],"AUP":[],"HR":[]}
     for j in range(1,len(valley_idcs)):
         wave_start = valley_idcs[j-1]
@@ -88,7 +111,28 @@ def get_wave_properties(signal, signal_times,peak_idcs,valley_idcs,fps):
         wave_peaks = peak_idcs[np_between(peak_idcs,wave_start,wave_end)]
         rise_time = 1000 * ((wave_peaks[0] - wave_start) / fps)
         pwa = signal[wave_peaks[0]] - np.mean([signal[wave_start],signal[wave_end]])
-        area = np.sum(signal[wave_start:wave_end]) / (signal_times[wave_end] - signal_times[wave_start])
+        # area = np.sum(signal[wave_start:wave_end]) / (signal_times[wave_end] - signal_times[wave_start])
+        area = np.trapz(signal[wave_start:wave_end],signal_times[wave_start:wave_end])
+        hr = 60_000 / (signal_times[wave_end] - signal_times[wave_start])
+        properties_dict['PeakIndex'].append(wave_peaks[0])
+        properties_dict['RT'].append(rise_time)
+        properties_dict['PWA'].append(pwa)
+        properties_dict['AUP'].append(area)
+        properties_dict['HR'].append(hr)
+    return properties_dict
+
+def get_wave_properties_torch(signal, signal_times,peak_idcs,valley_idcs,fps):
+
+    properties_dict = {"PeakIndex":[],"RT":[],"PWA":[],"AUP":[],"HR":[]}
+    for j in range(1,len(valley_idcs)):
+        wave_start = valley_idcs[j-1]
+        wave_end = valley_idcs[j]
+        wave_peaks = peak_idcs[torch_between(peak_idcs,wave_start,wave_end)]
+        rise_time = 1000 * ((wave_peaks[0] - wave_start) / fps)
+        pwa = signal[wave_peaks[0]] - torch.mean(torch.tensor([signal[wave_start],signal[wave_end]]))
+        # area = torch.sum(signal[wave_start:wave_end]) / (signal_times[wave_end] - signal_times[wave_start])
+        area = torch.trapz(signal[wave_start:wave_end],signal_times[wave_start:wave_end])
+        
         hr = 60_000 / (signal_times[wave_end] - signal_times[wave_start])
         properties_dict['PeakIndex'].append(wave_peaks[0])
         properties_dict['RT'].append(rise_time)

@@ -99,7 +99,7 @@ def main():
     """
 
     parser = argparse.ArgumentParser(description='Convert IBIS data to h5 format')
-    parser.add_argument('--dataset', type=str, default='vicar',choices=('vicar','vipl'), help='Dataset to use (vicar or vipl)')
+    parser.add_argument('--dataset', type=str, default='vicar',choices=('vicar','vipl','pure','ubfc1','ubfc2'), help='Dataset to use (vicar or vipl)')
     parser.add_argument('--ibis-path',default="", type=str, help='Path to the IBIS hdf file')
 
     args = parser.parse_args()

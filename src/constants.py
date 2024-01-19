@@ -187,3 +187,21 @@ class DatasetStats(object):
             self.VICAR_MAX = 0.04123
             self.VICAR_MIN = -0.03031
 
+class Normalization(object):
+
+    GT_MINMAX_DICT ={
+        "vicar":{"min":10818,"max":65413},
+        "vipl":{"min":0,"max":1},
+        "ubfc1":{"min":0,"max":127},
+        "ubfc2":{"min":-2.8306109,"max":4.7955921},
+        "pure":{"min":0,"max":127}
+    }
+
+    HR_RANGE = {"min":25,"max":240}
+
+    RT_RANGE = {"min":70,"max":650}
+
+    AUP_RANGE = {"min": 90, "max": 605}
+
+
+    

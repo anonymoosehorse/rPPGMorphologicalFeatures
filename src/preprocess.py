@@ -2,14 +2,48 @@ from pathlib import Path
 from omegaconf import OmegaConf
 import h5py
 import numpy as np
-from utils.pre_processing import read_and_process,resample_data,read_h5,read_numpy,read_gt_data,detect_extrema_to_dict,create_splits,remove_faulty_splits,create_cwt
+from utils.pre_processing import read_and_process,resample_data,read_h5,read_numpy,read_gt_data,detect_extrema_to_dict,create_splits,remove_faulty_splits,create_cwt,read_csv,read_pure_json
+from constants import Normalization
+from sklearn.preprocessing import minmax_scale
+
+def scale_to_range(value,old_min,old_max,new_min=0,new_max=1):
+    return ((new_max - new_min)*(value-old_min)/(old_max-old_min)) + new_min
+
+def load_gt_dict(gt_path,gt_fps,dataset):
+    if dataset == "vicar":
+        load_func = read_h5        
+    elif dataset == "vipl":
+        load_func = read_numpy    
+    elif dataset == "ubfc1":
+        load_func = read_csv
+    elif dataset == "ubfc2":
+        load_func = read_csv
+    elif dataset == "pure":
+        load_func = read_pure_json
+    
+    gt_sig_dict = read_gt_data(gt_path,gt_fps,load_func)    
+
+
+    return gt_sig_dict
+
+def normalize_gt_dict(gt_sig_dict,dataset):
+
+    if dataset not in Normalization.GT_MINMAX_DICT:
+        raise NotImplementedError(f"Normalization for {dataset} not implemented")
+
+    range_dict = Normalization.GT_MINMAX_DICT[dataset]
+
+    for key,value in gt_sig_dict.items():
+        gt_sig_dict[key][1] = scale_to_range(value[1],range_dict['min'],range_dict['max'])
+
+    return gt_sig_dict
 
 if __name__ == '__main__':
-    cfg = OmegaConf.load('preprocess_config.yaml')     
+    cfg = OmegaConf.load('x_preprocess_config.yaml')     
     cmd_cfg = OmegaConf.from_cli()
     cfg = OmegaConf.merge(cfg, cmd_cfg)
 
-    data_cfg = OmegaConf.load('dataset_config.yaml')
+    data_cfg = OmegaConf.load('x_dataset_config.yaml')
     data_cfg = data_cfg[cfg.dataset_to_run]
 
     traces_path = Path(data_cfg.traces_path)
@@ -36,12 +70,9 @@ if __name__ == '__main__':
     print("Done")
 
     print("Loading Ground Truth signal data...", end=" ")
-    if dataset == "vicar":
-        load_func = read_h5        
-    elif dataset == "vipl":
-        load_func = read_numpy    
-    
-    gt_sig_dict = read_gt_data(gt_path,gt_fps,load_func)
+    gt_sig_dict = load_gt_dict(gt_path,gt_fps,dataset)
+
+    gt_sig_dict = normalize_gt_dict(gt_sig_dict,dataset)
 
     if use_gt:
         signal_dict = resample_data(gt_sig_dict,gt_fps,30)
@@ -54,12 +85,18 @@ if __name__ == '__main__':
     
     splits = create_splits(signal_dict,gt_sig_dict,extrema_dict,fps=fps,gt_fps=gt_fps)
 
-    for name,data in splits.items():
-        if dataset == 'vicar':
-            data['AUP'] = list(((np.array(data['AUP'])*1000) / 30 - 10818) / 54595)
-            data['PWA'] = list(np.array(data['PWA']) / 54595)
-        else:
-            data['AUP'] = list((np.array(data['AUP'])*1000) / 30)
+    ## Normalize properties
+    # for name,data in splits.items():
+    #     data['HR'] = scale_to_range(np.array(data['HR']),Normalization.HR_RANGE['min'],Normalization.HR_RANGE['max'])
+    #     data['RT'] = scale_to_range(np.array(data['RT']),Normalization.RT_RANGE['min'],Normalization.RT_RANGE['max'])
+        
+
+    # for name,data in splits.items():
+    #     if dataset == 'vicar':
+    #         data['AUP'] = list(((np.array(data['AUP'])*1000) / 30 - 10818) / 54595)
+    #         data['PWA'] = list(np.array(data['PWA']) / 54595)
+    #     else:
+    #         data['AUP'] = list((np.array(data['AUP'])*1000) / 30)
 
     splits = remove_faulty_splits(splits)
     

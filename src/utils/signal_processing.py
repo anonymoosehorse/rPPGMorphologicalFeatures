@@ -1,10 +1,11 @@
 import json
 import numpy as np
-from scipy.signal import butter,filtfilt
+from scipy.signal import butter,filtfilt,firls
 import matplotlib.pyplot as plt
 import glob
 from tqdm import tqdm
 import pycwt as wavelet
+import torch
 
 def pos_img(mat,axis=0,time_dim=0):
     mean = np.nanmean(mat,axis=time_dim)
@@ -20,6 +21,11 @@ def pos_img(mat,axis=0,time_dim=0):
     z_mat = s_mat[:,:,0] + alpha * s_mat[:,:,1]
 
     return z_mat
+
+def fir_bp_filter(sig,fs,order,cutoffs=[0.5,6]):
+    bands = np.array([0,cutoffs[0]-0.2,cutoffs[0],cutoffs[1],cutoffs[1]+0.2,0.5*fs]) / (0.5*fs)
+    firls_coeff = firls(order,bands,[0,0,1,1,0,0])
+    return filtfilt(firls_coeff,1,sig)
 
 def pos(r, g, b):
     tn_r = temp_normalize(r)
@@ -98,6 +104,51 @@ def detect_peaks(sig, peak_delta):
     # for (int i = peakers.Length - (parameters.RightClip + 1) i < len(peakers) i++) peakers[i] = false
 
     return peaks, valleys
+def detect_peaks_torch(sig, peak_delta):
+    peaks = []
+    valleys = []
+
+    # Normalization by the mean
+    norm_sig = sig - torch.mean(sig)
+    delta = peak_delta * torch.max(norm_sig)
+
+    mxpos = 0
+    mnpos = 0
+    lookformax = True
+    mx = torch.tensor(np.NINF)
+    mn = torch.tensor(np.Inf)
+
+    for (i, temp) in enumerate(norm_sig):
+        if (temp > mx):
+            mx = temp
+            mxpos = i
+        if (temp < mn):
+            mn = temp
+            mnpos = i
+
+        if (lookformax):
+
+            if (temp < (mx - delta)):
+                # numPeaks++
+                peaks.append(mxpos)
+                mn = temp
+                mnpos = i
+                lookformax = False
+
+        else:
+
+            if (temp > (mn + delta)):
+                # numValleys++
+                valleys.append(mnpos)
+                mx = temp
+                mxpos = i
+                lookformax = True
+
+    # Remove the peak in clipped areas
+    # for (int i = 0 i < (parameters.LeftClip - 1) i++) peakers[i] = false
+    # for (int i = peakers.Length - (parameters.RightClip + 1) i < len(peakers) i++) peakers[i] = false
+
+    return torch.tensor(peaks).to(sig.device), torch.tensor(valleys).to(sig.device)
 
 def signal_to_cwt(time_s, signal,output_size=256):
     
