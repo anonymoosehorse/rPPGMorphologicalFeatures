@@ -51,7 +51,8 @@ class Runner(pl.LightningModule):
         # targets = torch.stack(tuple(data['target'] for data in batch))
         inputs = batch['data']
         targets = batch['target']
-        time = batch['time']
+        if 'time' in batch.keys():
+            time = batch['time']
         print(targets)
         if torch.isclose(targets,torch.tensor(0).float()).any():
             print(f"Empty target detected in {batch['name']}")

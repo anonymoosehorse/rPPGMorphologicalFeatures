@@ -111,6 +111,8 @@ class DatasetCWT(Dataset):
         with h5py.File(self.data_path,'r') as tmp_data:
             split_idx_idx = int(np.where(np.array(tmp_data[name]["SplitIndex"]) == split_idx)[0])
 
+            # split_time = tmp_data[name]['SplitTime'][split_idx_idx]
+
             split_data = tmp_data[name]['SplitData'][split_idx_idx]
             split_target = tmp_data[name][self.target][split_idx_idx]
         
@@ -123,7 +125,10 @@ class DatasetCWT(Dataset):
         split_target = split_target.float()
         split_target = normalize_gt(split_target,self.target)
 
-        return {"data":split_data,"target":split_target,"name":key}
+        # split_time = torch.from_numpy(split_time).to(self.device)
+        # split_time = split_time.float()
+
+        return {"data":split_data,"target":split_target,"name":key, }
 
 class DatasetIBIS(Dataset):
     def __init__(self,ibis_data_path,target,device,valid_data_ids):
@@ -152,6 +157,8 @@ class DatasetIBIS(Dataset):
         with h5py.File(self.data_path,'r') as tmp_data:
             split_idx_idx = int(np.where(np.array(tmp_data[name]["SplitIndex"]) == split_idx)[0])
 
+            # split_time = tmp_data[name]['SplitTime'][split_idx_idx]
+
             split_data = tmp_data[name]['SplitData'][split_idx_idx]
             split_target = tmp_data[name][self.target][split_idx_idx]
         
@@ -176,5 +183,8 @@ class DatasetIBIS(Dataset):
         split_target = torch.tensor(split_target).to(self.device)
         split_target = split_target.float()
         split_target = normalize_gt(split_target,self.target)
+
+        # split_time = torch.from_numpy(split_time).to(self.device)
+        # split_time = split_time.float()
 
         return {"data":split_data,"target":split_target,"name":key}
