@@ -17,6 +17,9 @@ test_*
 *.pkl
 *.h5
 x_*
+*.out
+*.slurm
+
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,visualstudiocode
