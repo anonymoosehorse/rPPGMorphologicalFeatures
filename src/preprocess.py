@@ -38,6 +38,18 @@ def normalize_gt_dict(gt_sig_dict,dataset):
 
     return gt_sig_dict
 
+def normalize_signal_dict(gt_sig_dict,dataset):
+
+    if dataset not in Normalization.SIGNAL_MINMAX_DICT:
+        raise NotImplementedError(f"Normalization for {dataset} not implemented")
+
+    range_dict = Normalization.SIGNAL_MINMAX_DICT[dataset]
+
+    for key,value in gt_sig_dict.items():
+        gt_sig_dict[key][1] = scale_to_range(value[1],range_dict['min'],range_dict['max'])
+
+    return gt_sig_dict
+
 if __name__ == '__main__':
     cfg = OmegaConf.load('x_preprocess_config.yaml')     
     cmd_cfg = OmegaConf.from_cli()
@@ -62,7 +74,8 @@ if __name__ == '__main__':
 
     print("Loading traces data filter and resample...", end=" ")
     if not use_gt:
-        signal_dict =  read_and_process(traces_path,fps)            
+        signal_dict =  read_and_process(traces_path,fps)    
+        signal_dict = normalize_signal_dict(signal_dict,dataset)        
         
         if fps != 30:
             signal_dict = resample_data(signal_dict,fps,30)

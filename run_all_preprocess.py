@@ -3,8 +3,8 @@ from pathlib import Path
 
 script_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_feature_estimation\src\preprocess.py")
 
-for dataset in ['vicar','ubfc1','ubfc2','pure']:
-    for use_gt in [True,False]:                    
+for dataset in ['vipl','vicar','ubfc1','ubfc2','pure']:
+    for use_gt in ['False']:#[True,False]:                    
         cmd = [
             r"python",str(script_path),
             f"dataset_to_run={dataset}",
@@ -15,11 +15,3 @@ for dataset in ['vicar','ubfc1','ubfc2','pure']:
 
         print(cmd)
         subprocess.run(cmd)
-                    
-
-                        
-
-                        
-
-
-

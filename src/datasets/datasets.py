@@ -17,16 +17,17 @@ from utils.pre_processing import scale_to_range
 
 def normalize_gt(data,target):
     if target == "AUP":
-        data = scale_to_range(data,Normalization.GT_MINMAX_DICT['AUP']['min'],Normalization.GT_MINMAX_DICT['AUP']['max'])
+        data = scale_to_range(data,Normalization.AUP_RANGE['min'],Normalization.AUP_RANGE['max'])
     elif target == "HR":
-        data = scale_to_range(data,Normalization.GT_MINMAX_DICT['HR']['min'],Normalization.GT_MINMAX_DICT['HR']['max'])
+        data = scale_to_range(data,Normalization.HR_RANGE['min'],Normalization.HR_RANGE['max'])
     elif target == "RT":
-        data = scale_to_range(data,Normalization.GT_MINMAX_DICT['RT']['min'],Normalization.GT_MINMAX_DICT['RT']['max'])
+        data = scale_to_range(data,Normalization.RT_RANGE['min'],Normalization.RT_RANGE['max'])
     elif target == "PWA":
         pass
     else:
         raise NotImplementedError(f"Normalization for {target} not implemented")
     return data
+
 
 class Dataset1D(Dataset):
     def __init__(self,traces_path,target,device,valid_data_ids):

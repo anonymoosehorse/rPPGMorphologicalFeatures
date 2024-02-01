@@ -39,9 +39,15 @@ for dataset in tqdm(['vicar','vipl']):
                         f"dataset.use_gt={use_gt}"
                     ]
 
-
-                    print(cmd)
-                    subprocess.run(cmd)
+                    if not use_gt:
+                        for fold_nr in range(n_folds):
+                            fold_cmd = cmd + [f"dataset.fold_number={fold_nr}"]
+                            print(fold_cmd)
+                            subprocess.run(fold_cmd)                            
+                            
+                    else:
+                        print(cmd)
+                        subprocess.run(cmd)
 
                         
 

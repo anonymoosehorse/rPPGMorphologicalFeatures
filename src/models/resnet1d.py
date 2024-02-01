@@ -269,7 +269,7 @@ class ResNet1D(nn.Module):
 
     def forward(self, x):
         # x = x[:,1,:].unsqueeze(1)        
-        x = x.unsqueeze(0)
+        x = x.unsqueeze(1)
         out = x
 
         # first conv
