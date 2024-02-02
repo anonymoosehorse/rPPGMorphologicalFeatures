@@ -42,7 +42,9 @@ class Runner(pl.LightningModule):
         
         if self.cfg.optimize.scheduler:
             scheduler = getattr(torch.optim.lr_scheduler,self.cfg.optimize.scheduler)(optimizer, **self.cfg.optimize.scheduler_settings)
-            return {"optimizer":optimizer,"scheduler":scheduler,"metric":"train-MAE"}
+            # return {"optimizer":optimizer,"scheduler":scheduler,"metric":"train-MAE"}
+            return [optimizer],[{"scheduler":scheduler,"monitor":"train-MAE"}]
+            
         
         return optimizer
 
@@ -53,9 +55,9 @@ class Runner(pl.LightningModule):
         targets = batch['target']
         if 'time' in batch.keys():
             time = batch['time']
-        print(targets)
-        if torch.isclose(targets,torch.tensor(0).float()).any():
-            print(f"Empty target detected in {batch['name']}")
+        # print(targets)
+        # if torch.isclose(targets,torch.tensor(0).float()).any():
+            # print(f"Empty target detected in {batch['name']}")
         if isinstance(self.model,PeakbasedDetector):
             outputs = self.model(inputs,time)
         else:
@@ -94,7 +96,8 @@ class Runner(pl.LightningModule):
 
     def on_train_epoch_end(self):
         # Log the epoch-level training accuracy
-        self.log('train-MAE', self.train_mae.compute())        
+        self.log('train-MAE', self.train_mae.compute())   
+        print(f"Learning Rate: {self.optimizers().param_groups[0]['lr']}")
         self.train_mae.reset()
 
     def on_validation_epoch_end(self):
@@ -139,7 +142,7 @@ def initialize_callbacks(cfg,checkpoint_dir):
         )
         training_callbacks.append(early_stopping_cb)
 
-    training_callbacks.append(pl.callbacks.LearningRateMonitor(logging_interval="step"))
+    training_callbacks.append(pl.callbacks.LearningRateMonitor(logging_interval="epoch"))
 
     return training_callbacks
 
