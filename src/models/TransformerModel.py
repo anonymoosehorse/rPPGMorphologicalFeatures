@@ -12,7 +12,7 @@ from torch.utils.data import dataset
 class TransformerModel(nn.Module):
 
     def __init__(self, seq_len: int, d_model: int, nhead: int, d_hid: int,
-                 nlayers: int, norm_factor, dropout: float = 0.1):
+                 nlayers: int, norm_factor, dropout: float = 0.1, output_dim: int = 1):
         super().__init__()
         self.norm_factor = norm_factor
 
@@ -31,7 +31,7 @@ class TransformerModel(nn.Module):
         # self.d_model = d_model
 
         # self.decoder = nn.Linear(seq_len, 64)
-        self.decoder = nn.Linear(seq_len, 1)
+        self.decoder = nn.Linear(seq_len, output_dim)
         self.dropout = nn.Dropout(dropout)
         self.avg_pool = nn.AdaptiveAvgPool1d(1)
         # self.self_attn_pool = SelfAttentionPooling(d_model)

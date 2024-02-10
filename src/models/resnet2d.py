@@ -16,7 +16,7 @@ Backbone CNN for RhythmNet model is a RestNet-18
 
 
 class Resnet2D(nn.Module):
-    def __init__(self, data_dim,use_yuv=False):
+    def __init__(self, data_dim,output_dim=1,use_yuv=False):
         super(Resnet2D, self).__init__()
 
         resnet = models.resnet18(pretrained=False)
@@ -35,7 +35,7 @@ class Resnet2D(nn.Module):
 
         self.dropout = nn.Dropout(p=0.5)
         self.fc1 = nn.Linear(512, 1000)
-        self.fc2 = nn.Linear(1000, 1)
+        self.fc2 = nn.Linear(1000, output_dim)
 
     def forward(self, x):                
         x = self.resnet18(x)

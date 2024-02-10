@@ -175,7 +175,7 @@ if __name__ == "__main__":
     experiment_name = cfg.comet.project_name + "/" + comet_logger.experiment.name
     csv_logger = CSVLogger("csv_logs",name=experiment_name)
 
-    model = get_model(cfg.model.name,cfg.model.data_dim,data_cfg.traces_fps,cfg.model.target)
+    model = get_model(cfg.model.name,cfg.model.data_dim,data_cfg.traces_fps,list(cfg.model.target))
     model = model.to(device)
     
     runner = Runner(cfg, model)
@@ -186,6 +186,8 @@ if __name__ == "__main__":
         checkpoint_dir.mkdir(parents=True)
 
     OmegaConf.save(cfg,checkpoint_dir / "config.yaml" )
+
+    # cfg = OmegaConf.to_object(cfg)
 
     training_callbacks = initialize_callbacks(cfg,checkpoint_dir=checkpoint_dir)
 
@@ -212,7 +214,7 @@ if __name__ == "__main__":
     # train_loader,test_loader,val_loader = get_dataloaders(cfg,device)
 
     train_loader,test_loader,val_loader = get_dataloaders(data_path=data_path,
-                                                          target=cfg.model.target,
+                                                          target=list(cfg.model.target),
                                                           input_representation=cfg.model.input_representation,
                                                           test_ids=test_ids,
                                                           val_ids=val_ids,

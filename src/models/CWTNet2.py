@@ -11,7 +11,7 @@ Backbone CNN for CWTNet model is a DeIT
 
 
 class CWTNet2(nn.Module):
-    def __init__(self, model, data_dim,use_yuv=False):
+    def __init__(self, model, data_dim,output_dim,use_yuv=False):
         super(CWTNet2, self).__init__()
         self.transformer = torch.hub.load('facebookresearch/deit:main', 'deit_base_patch16_224', pretrained=True, source='github')
         #else:
@@ -27,7 +27,7 @@ class CWTNet2(nn.Module):
 
         self.transformer.head = nn.Linear(self.transformer.head.in_features, 1000)
         self.dropout = nn.Dropout(0.5)
-        self.linear = nn.Linear(1000, 1)
+        self.linear = nn.Linear(1000, output_dim)
 
 
     def forward(self, x):

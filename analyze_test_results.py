@@ -4,6 +4,8 @@ from pathlib import Path
 from tqdm import tqdm
 
 test_results_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_feature_estimation\test_results\ruben-reproduction-new")
+test_results_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_feature_estimation\test_results\normalization_test_new")
+test_results_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_feature_estimation\test_results\normalization_test_new_shuffle")
 
 combined_results_path = Path.cwd() / (test_results_path.stem + ".csv")
 

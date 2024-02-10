@@ -60,9 +60,11 @@ class Dataset1D(Dataset):
             split_data = tmp_data[name]['SplitData'][split_idx_idx]
             split_time = tmp_data[name]['SplitTime'][split_idx_idx]
             
-            if self.target == 'all':
+            if self.target == 'all' or isinstance(self.target,list):
                 split_target = {}
                 for key in tmp_data[name].keys():
+                    if isinstance(self.target,list) and key not in self.target:
+                        continue
                     if key not in ['SplitData','SplitTime','SplitIndex']:
                         split_target[key] = tmp_data[name][key][split_idx_idx]
             else:
@@ -74,12 +76,12 @@ class Dataset1D(Dataset):
         split_time = torch.from_numpy(split_time).to(self.device)
         split_time = split_time.float()
 
-        if self.target == 'all':
-            split_target = {key:torch.tensor(value).to(self.device).float() for key,value in split_target.items()}
+        if self.target == 'all' or isinstance(self.target,list):
+            split_target = torch.stack([torch.tensor(value).to(self.device).float() for key,value in split_target.items()])
         else:
             split_target = torch.tensor(split_target).to(self.device)
             split_target = split_target.float()
-            split_target = normalize_gt(split_target,self.target)
+            # split_target = normalize_gt(split_target,self.target)
 
         return {"data":split_data,"target":split_target,"name":names,"time":split_time}
 
@@ -123,7 +125,7 @@ class DatasetCWT(Dataset):
                 
         split_target = torch.tensor(split_target).to(self.device)
         split_target = split_target.float()
-        split_target = normalize_gt(split_target,self.target)
+        # split_target = normalize_gt(split_target,self.target)
 
         # split_time = torch.from_numpy(split_time).to(self.device)
         # split_time = split_time.float()
@@ -182,7 +184,7 @@ class DatasetIBIS(Dataset):
                 
         split_target = torch.tensor(split_target).to(self.device)
         split_target = split_target.float()
-        split_target = normalize_gt(split_target,self.target)
+        # split_target = normalize_gt(split_target,self.target)
 
         # split_time = torch.from_numpy(split_time).to(self.device)
         # split_time = split_time.float()

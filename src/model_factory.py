@@ -3,8 +3,12 @@
 # from models.resnet1d import ResNet1D
 # from models.resnet2d import Resnet2D
 from models import CWTNet2,TransformerModel,ResNet1D,Resnet2D,PeakbasedDetector
+from omegaconf import ListConfig
 
 def get_model(model_name: str,data_dimensions,fps,target,norm_factor = 1):
+
+    output_dim = len(target) if isinstance(target,(list,ListConfig)) or target == 'all' else 1
+        
 
 
     if model_name == 'resnet1d':
@@ -15,19 +19,19 @@ def get_model(model_name: str,data_dimensions,fps,target,norm_factor = 1):
             stride=2,
             groups=1,
             n_block=10,
-            n_classes=1,
+            n_classes=output_dim,
             norm_factor=norm_factor,
             downsample_gap=2,
             increasefilter_gap=2,
             use_do=True,
             use_bn=True)
     elif model_name == 'resnet2d':
-        model = Resnet2D(data_dimensions)
+        model = Resnet2D(data_dimensions,output_dim=output_dim)
     elif model_name == 'transformer1d':
         model = TransformerModel(seq_len=300, d_model=256, nhead=4, d_hid=2048, nlayers=8,
-                                 norm_factor=norm_factor)
+                                 norm_factor=norm_factor,output_dim=output_dim)
     elif model_name == 'transformer2d':
-        model = CWTNet2(model_name, data_dimensions)
+        model = CWTNet2(model_name, data_dimensions,output_dim=output_dim)
     elif model_name == 'peakdetection1d':
         model = PeakbasedDetector(target,fps)
     else:

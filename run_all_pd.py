@@ -16,7 +16,7 @@ script_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_fea
 cmd_list = []
 
 # for dataset in ['vicar','vipl']:
-for dataset in tqdm(['vipl']):
+for dataset in tqdm(['vicar']):
     for use_gt in tqdm([True,False]):
         for network in ['peakdetection1d']:
             for representation in ["traces"]:
