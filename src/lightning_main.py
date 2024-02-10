@@ -220,6 +220,8 @@ if __name__ == "__main__":
                                                           val_ids=val_ids,
                                                           device=device,
                                                           name_to_id_func=get_name_to_id_func(cfg.dataset.name),
+                                                          normalize_data=cfg.dataset.normalize_data,
+                                                          flip_signal=cfg.dataset.flip_signal,
                                                           **loader_settings)
     checkpoint_path = None
     if not cfg.model.name == "peakdetection1d":

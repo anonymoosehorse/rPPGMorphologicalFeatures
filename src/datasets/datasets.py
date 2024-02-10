@@ -30,11 +30,13 @@ def normalize_gt(data,target):
 
 
 class Dataset1D(Dataset):
-    def __init__(self,traces_path,target,device,valid_data_ids):
+    def __init__(self,traces_path,target,device,valid_data_ids,normalize,flip_signal):
         self.data_path = traces_path       
         
         self.target = target
         self.device = device
+        self.normalize = normalize
+        self.flip_signal = flip_signal
 
         with h5py.File(traces_path,'r') as data:
             data_lookup = {
@@ -71,17 +73,27 @@ class Dataset1D(Dataset):
                 split_target = tmp_data[name][self.target][split_idx_idx]
         
         split_data = torch.from_numpy(split_data).to(self.device)
+        if self.flip_signal:
+            if self.normalize:
+                split_data = 1 + (split_data * -1)
+            else:
+                raise NotImplementedError("Flip signal only implemented for normalized data")
+             
         split_data = split_data.float()
 
         split_time = torch.from_numpy(split_time).to(self.device)
         split_time = split_time.float()
 
         if self.target == 'all' or isinstance(self.target,list):
-            split_target = torch.stack([torch.tensor(value).to(self.device).float() for key,value in split_target.items()])
+            if self.normalize:
+                split_target = torch.stack([torch.tensor(normalize_gt(value,key)).to(self.device).float() for key,value in split_target.items()])
+            else:
+                split_target = torch.stack([torch.tensor(value).to(self.device).float() for key,value in split_target.items()])
         else:
             split_target = torch.tensor(split_target).to(self.device)
             split_target = split_target.float()
-            # split_target = normalize_gt(split_target,self.target)
+            if self.normalize:
+                split_target = normalize_gt(split_target,self.target)
 
         return {"data":split_data,"target":split_target,"name":names,"time":split_time}
 
