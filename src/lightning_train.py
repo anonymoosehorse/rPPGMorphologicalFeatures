@@ -1,109 +1,19 @@
+from pathlib import Path
+
 import comet_ml
 import pytorch_lightning as pl
-import torchmetrics
-import torch.nn as nn
 import torch
 from pytorch_lightning.loggers import CometLogger, CSVLogger
-from model_factory import get_model
-from dataloader_factory import get_dataloaders
-from dataloader_factory import get_data_path,get_name_to_id_func
-from models.PeakbasedDetector import PeakbasedDetector
-from omegaconf import OmegaConf
-from constants import DataFoldsNew
-from pathlib import Path
+from omegaconf import OmegaConf,ListConfig
 import pandas as pd
 
+from .model_factory import get_model
+from .dataloader_factory import get_dataloaders
+from .dataloader_factory import get_data_path,get_name_to_id_func
+from .models.PeakbasedDetector import PeakbasedDetector
+from .constants import DataFoldsNew
+from .lightning_module import Runner
 
-class Runner(pl.LightningModule):
-    def __init__(self, cfg, model):
-        super().__init__()
-        self.cfg = cfg
-        self.model = model
-        self.loss_fn = nn.L1Loss()
-        
-        self.train_mae = torchmetrics.MeanAbsoluteError()        
-        self.val_mae = torchmetrics.MeanAbsoluteError()        
-        self.test_mae = torchmetrics.MeanAbsoluteError() 
-        # self.automatic_optimization = True      
-        
-
-    def forward(self, x):
-        # Runner needs to redirect any model.forward() calls to the actual
-        # network
-        return self.model(x)
-
-    def configure_optimizers(self):
-        if self.cfg.optimize.optimizer == 'Adam':
-            optimizer = torch.optim.Adam(self.model.parameters(), lr=self.cfg.optimize.lr)
-        elif self.cfg.optimize.optimizer == 'SGD':
-            optimizer = torch.optim.SGD(self.model.parameters(), lr=self.cfg.optimize.lr)
-        else:
-            raise NotImplementedError(f"Optimizer {self.cfg.optimizer}")
-        
-        if self.cfg.optimize.scheduler:
-            scheduler = getattr(torch.optim.lr_scheduler,self.cfg.optimize.scheduler)(optimizer, **self.cfg.optimize.scheduler_settings)
-            # return {"optimizer":optimizer,"scheduler":scheduler,"metric":"train-MAE"}
-            return [optimizer],[{"scheduler":scheduler,"monitor":"train-MAE"}]
-            
-        
-        return optimizer
-
-    def _step(self, batch):        
-        # inputs = torch.stack(tuple(data['data'] for data in batch))
-        # targets = torch.stack(tuple(data['target'] for data in batch))
-        inputs = batch['data']
-        targets = batch['target']
-        if 'time' in batch.keys():
-            time = batch['time']
-        # print(targets)
-        # if torch.isclose(targets,torch.tensor(0).float()).any():
-            # print(f"Empty target detected in {batch['name']}")
-        if isinstance(self.model,PeakbasedDetector):
-            outputs = self.model(inputs,time)
-        else:
-            outputs = self.model(inputs)
-        loss = self.loss_fn(outputs, targets.view(outputs.shape))
-
-        return loss, targets, outputs
-        
-
-    def training_step(self, batch, batch_idx):
-        loss, y, y_hat = self._step(batch)
-        self.train_mae(y_hat, y.view(y_hat.shape))
-
-        # Log step-level loss & accuracy
-        self.log("train/loss_step", loss,batch_size=self.cfg.train.batch_size)        
-        return loss
-
-    def validation_step(self, batch, batch_idx):
-        loss, y, y_hat = self._step(batch)
-        self.val_mae(y_hat, y.view(y_hat.shape))
-
-        # Log step-level loss & accuracy
-        self.log("val/loss_step", loss,batch_size=self.cfg.train.batch_size)
-        return loss
-
-    def test_step(self, batch, batch_idx):
-        loss, y, y_hat = self._step(batch)
-        self.test_mae(y_hat, y.view(y_hat.shape))
-
-        # Log test loss
-        self.log("test/loss_step", loss,batch_size=self.cfg.train.batch_size)
-        for i,name in enumerate(batch['name']):
-            self.log("test/target"+f"/{name}", y[i].detach().cpu(),batch_size=self.cfg.train.batch_size)
-            self.log("test/pred"+f"/{name}", y_hat.flatten()[i].detach().cpu(),batch_size=self.cfg.train.batch_size)
-        return loss
-
-    def on_train_epoch_end(self):
-        # Log the epoch-level training accuracy
-        self.log('train-MAE', self.train_mae.compute())   
-        print(f"Learning Rate: {self.optimizers().param_groups[0]['lr']}")
-        self.train_mae.reset()
-
-    def on_validation_epoch_end(self):
-        # Log the epoch-level validation accuracy
-        self.log('val-MAE', self.val_mae.compute())
-        self.val_mae.reset()
 
 def config_exists_in_project(cfg):
     cfgs_in_project = list((Path("model_checkpoints") / cfg.comet.project_name).rglob("*.yaml"))
@@ -146,10 +56,9 @@ def initialize_callbacks(cfg,checkpoint_dir):
 
     return training_callbacks
 
-if __name__ == "__main__":
-
+def run_training(checkpoint_dir,config_path,dataset_config_path,experiment_name=None):
     # Load defaults and overwrite by command-line arguments
-    cfg = OmegaConf.load("x_config.yaml")
+    cfg = OmegaConf.load(config_path)
     cmd_cfg = OmegaConf.from_cli()
     cfg = OmegaConf.merge(cfg, cmd_cfg)
 
@@ -172,15 +81,17 @@ if __name__ == "__main__":
 
     comet_logger = CometLogger(**cfg.comet) 
     comet_logger.log_hyperparams(OmegaConf.to_container(cfg,resolve=True))
-    experiment_name = cfg.comet.project_name + "/" + comet_logger.experiment.name
+    if experiment_name is None:
+        experiment_name = cfg.comet.project_name + "/" + comet_logger.experiment.name
+    
     csv_logger = CSVLogger("csv_logs",name=experiment_name)
+
+    checkpoint_dir = checkpoint_dir / experiment_name
 
     model = get_model(cfg.model.name,cfg.model.data_dim,data_cfg.traces_fps,list(cfg.model.target))
     model = model.to(device)
     
-    runner = Runner(cfg, model)
-
-    checkpoint_dir = Path(__file__).parent.parent / 'model_checkpoints' / experiment_name
+    runner = Runner(cfg, model)    
     
     if not checkpoint_dir.exists():
         checkpoint_dir.mkdir(parents=True)
@@ -237,12 +148,21 @@ if __name__ == "__main__":
         test_results = trainer.test(runner,ckpt_path=checkpoint_path, dataloaders=val_loader)
         
         test_df = pd.DataFrame(test_results).T.reset_index().iloc[1:]
-        test_df[['Set','Type','ID']] = test_df['index'].str.split("/",expand=True)
+        if isinstance(cfg.model.target,ListConfig):
+            test_df[['Set','Type','ID','Target']] = test_df['index'].str.split("/",expand=True)
+        else:
+            test_df[['Set','Type','ID']] = test_df['index'].str.split("/",expand=True)
+            test_df['Target'] = cfg.model.target
         test_df = test_df.drop(columns=['index']).rename(columns={0:'value'})
-        test_df['Target'] = cfg.model.target
         test_df['Model'] = cfg.model.name
         test_df['InptRep'] = cfg.model.input_representation
         test_df['Dataset'] = cfg.dataset.name        
         test_df['GT'] = int(cfg.dataset.use_gt)
         test_df['Fold'] = int(cfg.dataset.fold_number)
         test_df.to_csv(checkpoint_dir / "TestResults.csv",index=False)
+
+if __name__ == "__main__":
+    checkpoint_dir = Path(__file__).parent.parent / 'model_checkpoints'
+    config_path = Path(__file__).parent.parent / "x_config.yaml"
+    dataset_config_path = Path(__file__).parent.parent / "x_dataset_config.yaml"
+    run_training(checkpoint_dir,config_path,dataset_config_path)

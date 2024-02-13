@@ -1,14 +1,9 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
-import torchvision.models as models
-import ssl
-# import config
-import numpy as np
-import cv2
-from PIL import Image
-from utils.signal_processing import detect_peaks_torch,fir_bp_filter
-from utils.pre_processing import get_wave_properties_torch
+
+from ..utils.signal_processing import detect_peaks_torch,fir_bp_filter
+from ..utils.pre_processing import get_wave_properties_torch
 
 class PeakbasedDetector(nn.Module):
     def __init__(self, target_name, signal_fps):

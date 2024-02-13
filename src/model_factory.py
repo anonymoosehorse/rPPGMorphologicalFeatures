@@ -2,8 +2,9 @@
 # from models.TransformerModel import TransformerModel
 # from models.resnet1d import ResNet1D
 # from models.resnet2d import Resnet2D
-from models import CWTNet2,TransformerModel,ResNet1D,Resnet2D,PeakbasedDetector
 from omegaconf import ListConfig
+
+from .models import CWTNet2,TransformerModel,ResNet1D,Resnet2D,PeakbasedDetector
 
 def get_model(model_name: str,data_dimensions,fps,target,norm_factor = 1):
 
