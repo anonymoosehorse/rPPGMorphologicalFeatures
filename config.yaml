@@ -12,6 +12,8 @@ optimize:
 train:                            # Training settings
   epochs: 1                       # Number of epochs
   batch_size: 16                  # Batch size
+  loss: L1Loss
+  shuffle: false
   early_stopping: false           # Use Early stopping    
   early_stopping_settings:        # Early stopping settings
       monitor: val-MAE

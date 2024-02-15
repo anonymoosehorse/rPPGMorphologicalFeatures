@@ -10,7 +10,7 @@ class Runner(pl.LightningModule):
         super().__init__()
         self.cfg = cfg
         self.model = model
-        self.loss_fn = nn.L1Loss()
+        self.loss_fn = getattr(nn,cfg.train.loss)() #nn.MSELoss() #nn.L1Loss()
         
         self.train_mae = torchmetrics.MeanAbsoluteError()        
         self.val_mae = torchmetrics.MeanAbsoluteError()        
@@ -63,7 +63,7 @@ class Runner(pl.LightningModule):
         self.train_mae(y_hat, y.view(y_hat.shape))
 
         # Log step-level loss & accuracy
-        self.log("train/loss_step", loss,batch_size=self.cfg.train.batch_size)        
+        self.log("train/loss_step", loss,batch_size=batch['data'].shape[0])        
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -71,7 +71,7 @@ class Runner(pl.LightningModule):
         self.val_mae(y_hat, y.view(y_hat.shape))
 
         # Log step-level loss & accuracy
-        self.log("val/loss_step", loss,batch_size=self.cfg.train.batch_size)
+        self.log("val/loss_step", loss,batch_size=batch['data'].shape[0])
         return loss
 
     def test_step(self, batch, batch_idx):
@@ -79,7 +79,7 @@ class Runner(pl.LightningModule):
         self.test_mae(y_hat, y.view(y_hat.shape))
 
         # Log test loss
-        self.log("test/loss_step", loss,batch_size=self.cfg.train.batch_size)
+        self.log("test/loss_step", loss,batch_size=batch['data'].shape[0])
         for i,name in enumerate(batch['name']):
             if not isinstance(self.cfg.model.target,str):
                 for j,target_name in enumerate(self.cfg.model.target):
@@ -93,10 +93,15 @@ class Runner(pl.LightningModule):
     def on_train_epoch_end(self):
         # Log the epoch-level training accuracy
         self.log('train-MAE', self.train_mae.compute())   
-        print(f"Learning Rate: {self.optimizers().param_groups[0]['lr']}")
+        # print(f"Learning Rate: {self.optimizers().param_groups[0]['lr']}")
         self.train_mae.reset()
 
     def on_validation_epoch_end(self):
         # Log the epoch-level validation accuracy
         self.log('val-MAE', self.val_mae.compute())
         self.val_mae.reset()
+
+    def on_test_epoch_end(self):
+        # Log the epoch-level validation accuracy
+        self.log('test-MAE', self.test_mae.compute())
+        self.test_mae.reset()

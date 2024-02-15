@@ -1,16 +1,25 @@
-import numpy as np
-from .signal_processing import pos,butter_lowpass_filter,detect_peaks,signal_to_cwt
 import json
+
+import numpy as np
 import h5py
 import torch.nn.functional as F
 from torchvision.transforms import ToTensor
 from tqdm import tqdm
 import torch
 import pandas as pd
+from scipy.interpolate import interp1d
+
+from .signal_processing import pos,butter_lowpass_filter,detect_peaks,signal_to_cwt
 
 
 def scale_to_range(value,old_min,old_max,new_min=0,new_max=1):
     return ((new_max - new_min)*(value-old_min)/(old_max-old_min)) + new_min
+
+def resample_signal(time,signal):
+    f = interp1d(time, signal)
+    new_time = np.linspace(time[0], time[-1], len(signal))
+    new_signal = f(new_time)    
+    return new_time,new_signal
 
 def get_data_from_json(json_path):
     with open(json_path, 'r') as f:
@@ -40,19 +49,22 @@ def read_and_process(traces_path,fps):
 def read_h5(h5_path):
     with h5py.File(h5_path, "r") as f:
         gt_data = np.array(f['data']['PPG'])
-    return gt_data
+    return gt_data,None
 
 def read_csv(csv_path):
     gt_data = pd.read_csv(csv_path)
-    gt_data = gt_data['Signal'].to_numpy()
-    return gt_data
+    gt_signal = gt_data['Signal'].to_numpy()
+    gt_time = gt_data['Time'].to_numpy()
+    return gt_signal,gt_time
 
-def read_pure_json(json_path):
+def read_pure_json(json_path,gt_fps):
     with open(json_path, 'r') as f:
         data = json.load(f)
     gt_data = [data_point['Value']['waveform'] for data_point in data['/FullPackage']]
     gt_data = np.array(gt_data, dtype=float)
-    return gt_data
+    gt_time = [data_point['Timestamp'] for data_point in data['/FullPackage']]
+    gt_time = (np.array(gt_time) - gt_time[0]) / 1_000_000
+    return gt_data,gt_time
 
 def read_numpy(np_path):
     gt_data = np.loadtxt(
@@ -61,11 +73,21 @@ def read_numpy(np_path):
 
 def read_gt_data(gt_path,gt_fps,load_func):
     gt_lookup = {}
-    
+    print()
     for gt_file_path in gt_path.glob("*.*"):
-        gt_data = load_func(gt_file_path)
-        gt_t = 1000 / gt_fps
-        gt_time = [i * gt_t for i in range(len(gt_data))]
+        gt_data,gt_time = load_func(gt_file_path,gt_fps)
+        if gt_time is None:
+            gt_t = 1000 / gt_fps
+            gt_time = [i * gt_t for i in range(len(gt_data))]
+        else:
+            if np.diff(gt_time).mean() < 1:                
+                print(f"\r Assuming time is in seconds correcting to milliseconds for file {gt_file_path.stem}",end=" ")
+                gt_time = gt_time * 1000
+
+        if not np_between(np.diff(gt_time).max(),(1000 / gt_fps) - 5,(1000 / gt_fps) + 5):
+            gt_time,gt_data = resample_signal(gt_time,gt_data)            
+            print(f"\r Resampled {gt_file_path.name} | Difference between given and new fps {gt_fps -  1000 / np.diff(gt_time).mean()} \t",end=" ")
+
         gt_lookup[gt_file_path.stem] = np.array([gt_time,gt_data])
     return gt_lookup
 
@@ -84,7 +106,11 @@ def resample_data(signal_dict,source_fps,new_fps=30):
 def detect_extrema_to_dict(signal_dict):
     extrema_dict = {}
     for key,value in signal_dict.items():
-        peak_idcs,valley_idcs = detect_peaks(value[1,:],0.3)
+        sig = value[1,:]
+        if np.isnan(sig).any():
+            print(f"\r Found NaN values in {key}",end=" ")
+            
+        peak_idcs,valley_idcs = detect_peaks(sig,0.3)
         extrema_dict[key] = {}
         extrema_dict[key]['peaks'] = peak_idcs
         extrema_dict[key]['valleys'] = valley_idcs
@@ -155,9 +181,13 @@ def create_splits(signal_dict,gt_dict,extrema_dict,fps,gt_fps,window_time_s=10):
         split_indices = np.arange(0, len(signal), window_time_s*fps)
         gt_split_indices = gt_split_indices = ((split_indices / fps) * gt_fps).astype(int)
         
-        gt_time = gt_dict[name][0,:]
-        
+        gt_time = gt_dict[name][0,:]        
         gt_sig = gt_dict[name][1,:]
+
+        gt_peaks = np.zeros_like(gt_sig)
+        gt_peaks[extrema_dict[name]['peaks']] = 1
+        gt_peaks[extrema_dict[name]['valleys']] = -1
+
         peak_idcs = np.array(extrema_dict[name]['peaks'])
         valley_idcs = np.array(extrema_dict[name]['valleys'])
 
@@ -186,15 +216,30 @@ def create_splits(signal_dict,gt_dict,extrema_dict,fps,gt_fps,window_time_s=10):
         avg_properties['SplitData'] = np.split(signal, split_indices)[1:-1]
         avg_properties['SplitTime'] = np.split(time, split_indices)[1:-1]
 
+        avg_properties['SplitGTData'] = np.split(gt_dict[name][1], gt_split_indices)[1:-1]
+        avg_properties['SplitGTTime'] = np.split(gt_dict[name][0], gt_split_indices)[1:-1]
+
+        avg_properties['SplitGTPeaks'] = np.split(gt_peaks, gt_split_indices)[1:-1]        
+
         matched_splits[name] = avg_properties
         
     return matched_splits
     
-def remove_faulty_splits(splits):
+def remove_faulty_splits(splits):    
     for name,data in splits.items():        
         for idx in sorted(data['SplitIndex'],reverse=True):
-            if np.isnan(data['HR'][idx]) or not np_between(data['HR'][idx],25,240) or not np_between(data['RT'][idx],50,1000):                
-                print(f"Removed Window {idx} of Video {name} due to missing values / incorrect HR or RT")
+            remove = False
+            if np.isnan(data['HR'][idx]):
+                print(f"Removed Window {idx} of Video {name} due to missing values")
+                remove = True
+            elif not np_between(data['HR'][idx],25,240):
+                print(f"Removed Window {idx} of Video {name} due to incorrect HR")
+                remove = True
+            elif not np_between(data['RT'][idx],50,1000):                
+                print(f"Removed Window {idx} of Video {name} due to incorrect RT")
+                remove = True
+
+            if remove:
                 for key in data.keys():
                     data[key].pop(idx)
     return splits

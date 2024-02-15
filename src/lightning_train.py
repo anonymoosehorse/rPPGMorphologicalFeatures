@@ -72,8 +72,6 @@ def run_training(checkpoint_dir,config_path,dataset_config_path,experiment_name=
     print("Training Configuration")
     print(OmegaConf.to_yaml(cfg))
 
-    device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
-    print(f"Using device: {device}")    
 
     # Seed everything. Note that this does not make training entirely
     # deterministic.
@@ -88,8 +86,7 @@ def run_training(checkpoint_dir,config_path,dataset_config_path,experiment_name=
 
     checkpoint_dir = checkpoint_dir / experiment_name
 
-    model = get_model(cfg.model.name,cfg.model.data_dim,data_cfg.traces_fps,list(cfg.model.target))
-    model = model.to(device)
+    model = get_model(cfg.model.name,cfg.model.data_dim,data_cfg.traces_fps,list(cfg.model.target))    
     
     runner = Runner(cfg, model)    
     
@@ -104,7 +101,7 @@ def run_training(checkpoint_dir,config_path,dataset_config_path,experiment_name=
 
     trainer = pl.Trainer(
         max_epochs=cfg.train.epochs,
-        logger=[comet_logger,csv_logger],               
+        logger=[comet_logger,csv_logger],                       
         accelerator='auto',
         callbacks=training_callbacks,
         log_every_n_steps=2
@@ -116,7 +113,7 @@ def run_training(checkpoint_dir,config_path,dataset_config_path,experiment_name=
     loader_settings = {
         "batch_size":cfg.train.batch_size,
         "num_workers":cfg.dataset.num_workers,
-        "shuffle":False
+        "shuffle":cfg.train.shuffle
     }
 
     data_folds = DataFoldsNew(cfg.dataset.use_gt,cfg.dataset.name)
@@ -128,8 +125,7 @@ def run_training(checkpoint_dir,config_path,dataset_config_path,experiment_name=
                                                           target=list(cfg.model.target),
                                                           input_representation=cfg.model.input_representation,
                                                           test_ids=test_ids,
-                                                          val_ids=val_ids,
-                                                          device=device,
+                                                          val_ids=val_ids,                                                          
                                                           name_to_id_func=get_name_to_id_func(cfg.dataset.name),
                                                           normalize_data=cfg.dataset.normalize_data,
                                                           flip_signal=cfg.dataset.flip_signal,

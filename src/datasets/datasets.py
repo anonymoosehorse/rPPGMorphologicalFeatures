@@ -28,11 +28,10 @@ def normalize_gt(data,target):
 
 
 class Dataset1D(Dataset):
-    def __init__(self,traces_path,target,device,valid_data_ids,normalize,flip_signal):
+    def __init__(self,traces_path,target,valid_data_ids,normalize,flip_signal):
         self.data_path = traces_path       
         
-        self.target = target
-        self.device = device
+        self.target = target        
         self.normalize = normalize
         self.flip_signal = flip_signal
 
@@ -70,7 +69,8 @@ class Dataset1D(Dataset):
             else:
                 split_target = tmp_data[name][self.target][split_idx_idx]
         
-        split_data = torch.from_numpy(split_data).to(self.device)
+        # split_data = torch.from_numpy(split_data).to(self.device)
+        split_data = torch.from_numpy(split_data)
         if self.flip_signal:
             if self.normalize:
                 split_data = 1 + (split_data * -1)
@@ -79,16 +79,17 @@ class Dataset1D(Dataset):
              
         split_data = split_data.float()
 
-        split_time = torch.from_numpy(split_time).to(self.device)
+        # split_time = torch.from_numpy(split_time).to(self.device)
+        split_time = torch.from_numpy(split_time)
         split_time = split_time.float()
 
         if self.target == 'all' or isinstance(self.target,list):
-            if self.normalize:
-                split_target = torch.stack([torch.tensor(normalize_gt(value,key)).to(self.device).float() for key,value in split_target.items()])
-            else:
-                split_target = torch.stack([torch.tensor(value).to(self.device).float() for key,value in split_target.items()])
-        else:
-            split_target = torch.tensor(split_target).to(self.device)
+            if self.normalize:                
+                split_target = torch.stack([torch.tensor(normalize_gt(value,key)).float() for key,value in split_target.items()])
+            else:                
+                split_target = torch.stack([torch.tensor(value).float() for key,value in split_target.items()])
+        else:            
+            split_target = torch.tensor(split_target)
             split_target = split_target.float()
             if self.normalize:
                 split_target = normalize_gt(split_target,self.target)
@@ -97,11 +98,10 @@ class Dataset1D(Dataset):
 
 
 class DatasetCWT(Dataset):
-    def __init__(self,cwt_data_path,target,device,valid_data_ids):
+    def __init__(self,cwt_data_path,target,valid_data_ids):
         self.data_path = cwt_data_path
         
-        self.target = target
-        self.device = device
+        self.target = target        
 
         with h5py.File(cwt_data_path,'r') as data:
             data_lookup = {
@@ -129,11 +129,11 @@ class DatasetCWT(Dataset):
             split_target = tmp_data[name][self.target][split_idx_idx]
         
         split_data = np.stack([np.real(split_data),np.imag(split_data)])
-        split_data = torch.from_numpy(split_data).to(self.device)
+        split_data = torch.from_numpy(split_data)
         split_data = F.interpolate(split_data.unsqueeze(0),(224,224)).squeeze(0)
         split_data = split_data.float()
                 
-        split_target = torch.tensor(split_target).to(self.device)
+        split_target = torch.tensor(split_target)
         split_target = split_target.float()
         # split_target = normalize_gt(split_target,self.target)
 
@@ -143,11 +143,10 @@ class DatasetCWT(Dataset):
         return {"data":split_data,"target":split_target,"name":key, }
 
 class DatasetIBIS(Dataset):
-    def __init__(self,ibis_data_path,target,device,valid_data_ids):
+    def __init__(self,ibis_data_path,target,valid_data_ids):
         self.data_path = ibis_data_path 
         
-        self.target = target
-        self.device = device
+        self.target = target        
         
         with h5py.File(ibis_data_path,'r') as data:
             data_lookup = {
@@ -182,7 +181,7 @@ class DatasetIBIS(Dataset):
                 limit_direction='both',
                 axis=0).to_numpy()
         split_data = minmax_scale(split_data,feature_range=(0,1))
-        split_data = torch.from_numpy(split_data).to(self.device)
+        split_data = torch.from_numpy(split_data)
         split_data = split_data.unsqueeze(0)
         split_data = F.interpolate(split_data.unsqueeze(0),(224,224)).squeeze(0)
         split_data = split_data.float()
@@ -192,7 +191,7 @@ class DatasetIBIS(Dataset):
             split_data = torch.nan_to_num(split_data,0)
 
                 
-        split_target = torch.tensor(split_target).to(self.device)
+        split_target = torch.tensor(split_target)
         split_target = split_target.float()
         # split_target = normalize_gt(split_target,self.target)
 

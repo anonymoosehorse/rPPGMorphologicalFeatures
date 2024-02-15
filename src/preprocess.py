@@ -5,6 +5,7 @@ import numpy as np
 from utils.pre_processing import read_and_process,resample_data,read_h5,read_numpy,read_gt_data,detect_extrema_to_dict,create_splits,remove_faulty_splits,create_cwt,read_csv,read_pure_json
 from constants import Normalization
 from sklearn.preprocessing import minmax_scale
+import pandas as pd
 
 def scale_to_range(value,old_min,old_max,new_min=0,new_max=1):
     return ((new_max - new_min)*(value-old_min)/(old_max-old_min)) + new_min
@@ -17,6 +18,8 @@ def load_gt_dict(gt_path,gt_fps,dataset):
     elif dataset == "ubfc1":
         load_func = read_csv
     elif dataset == "ubfc2":
+        load_func = read_csv
+    elif dataset == "ucla":
         load_func = read_csv
     elif dataset == "pure":
         load_func = read_pure_json
@@ -50,6 +53,33 @@ def normalize_signal_dict(gt_sig_dict,dataset):
 
     return gt_sig_dict
 
+def generate_balanced_classes(splits,num_classes=10):
+    ## Generate balanced classes
+
+    ## Collect all GT data in this dataset
+    gt_df_list = []
+    for name,data in splits.items():
+        tmp_df = pd.DataFrame({key:val for key,val in data.items() if key in ['HR','RT','AUP','PWA','SplitIndex']})
+        tmp_df = tmp_df.assign(Name=name)
+        gt_df_list.append(tmp_df)
+
+    gt_df = pd.concat(gt_df_list)
+
+    ## Per GT type create balanced classes
+    for gt_type in ['HR','RT','AUP','PWA']:
+        gt_df[f"{gt_type}_class"] = pd.qcut(gt_df[gt_type],q=num_classes,labels=range(num_classes))
+
+    ## Add the class to the splits
+    for name,data in splits.items():
+        tmp_df = gt_df[gt_df['Name'] == name]
+        tmp_df = tmp_df.sort_values(by='SplitIndex')
+
+        for gt_type in ['HR','RT','AUP','PWA']:
+            data[f"{gt_type}_class"] = list(tmp_df[f"{gt_type}_class"])    
+        
+    return splits
+
+
 if __name__ == '__main__':
     cfg = OmegaConf.load('x_preprocess_config.yaml')     
     cmd_cfg = OmegaConf.from_cli()
@@ -75,7 +105,8 @@ if __name__ == '__main__':
     print("Loading traces data filter and resample...", end=" ")
     if not use_gt:
         signal_dict =  read_and_process(traces_path,fps)    
-        signal_dict = normalize_signal_dict(signal_dict,dataset)        
+        if cfg.normalize:
+            signal_dict = normalize_signal_dict(signal_dict,dataset)        
         
         if fps != 30:
             signal_dict = resample_data(signal_dict,fps,30)
@@ -84,8 +115,9 @@ if __name__ == '__main__':
 
     print("Loading Ground Truth signal data...", end=" ")
     gt_sig_dict = load_gt_dict(gt_path,gt_fps,dataset)
-
-    gt_sig_dict = normalize_gt_dict(gt_sig_dict,dataset)
+    
+    if cfg.normalize:
+        gt_sig_dict = normalize_gt_dict(gt_sig_dict,dataset)
 
     if use_gt:
         signal_dict = resample_data(gt_sig_dict,gt_fps,30)
@@ -97,6 +129,8 @@ if __name__ == '__main__':
     extrema_dict = detect_extrema_to_dict(gt_sig_dict)
     
     splits = create_splits(signal_dict,gt_sig_dict,extrema_dict,fps=fps,gt_fps=gt_fps)
+
+    splits = generate_balanced_classes(splits)
 
     ## Normalize properties
     # for name,data in splits.items():

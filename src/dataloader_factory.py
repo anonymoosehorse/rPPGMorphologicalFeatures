@@ -14,8 +14,7 @@ def get_dataloaders(
         target,
         input_representation,
         test_ids,
-        val_ids,
-        device,      
+        val_ids,          
         name_to_id_func,  
         normalize_data=False,
         flip_signal=False,
@@ -41,9 +40,9 @@ def get_dataloaders(
     else:
         raise NotImplementedError
 
-    dl_train = dataset_class(data_path,target,device,train_names,normalize_data,flip_signal)
-    dl_test = dataset_class(data_path,target,device,test_names,normalize_data,flip_signal)
-    dl_val = dataset_class(data_path,target,device,val_names,normalize_data,flip_signal)
+    dl_train = dataset_class(data_path,target,train_names,normalize_data,flip_signal)
+    dl_test = dataset_class(data_path,target,test_names,normalize_data,flip_signal)
+    dl_val = dataset_class(data_path,target,val_names,normalize_data,flip_signal)
 
     print(f"Trainset: {len(dl_train)}, Testset: {len(dl_test)}, Trainset: {len(dl_val)}")
 

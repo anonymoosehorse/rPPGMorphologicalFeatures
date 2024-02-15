@@ -64,8 +64,8 @@ def detect_peaks(sig, peak_delta):
     valleys = []
 
     # Normalization by the mean
-    norm_sig = sig - np.mean(sig)
-    delta = peak_delta * np.max(norm_sig)
+    norm_sig = sig - np.nanmean(sig)
+    delta = peak_delta * np.nanmax(norm_sig)
 
     mxpos = 0
     mnpos = 0
