@@ -16,8 +16,8 @@ def get_dataloaders(
         test_ids,
         val_ids,          
         name_to_id_func,  
-        normalize_data=False,
-        flip_signal=False,
+        normalize_data,
+        flip_signal,
         **loader_kwargs
         ):    
 
@@ -49,6 +49,8 @@ def get_dataloaders(
     train_loader = DataLoader(
         dataset=dl_train,
         **loader_kwargs)
+    
+    loader_kwargs['shuffle'] = False
     
     test_loader = DataLoader(
         dataset=dl_test,
@@ -90,10 +92,14 @@ def get_data_path(root_dir,dataset,input_representation,use_gt):
 
 def get_name_to_id_func(dataset):
     
-    if dataset == 'vicar':
-        name_to_id = lambda x: int(x.split("_")[0])
+    if dataset in ['vicar','ucla']:
+        name_to_id = lambda x: int(x.split("_")[0])        
     elif dataset == 'vipl':
         name_to_id = lambda x: int(x.split("_")[0].replace("p",""))        
+    elif dataset in ['pure','ubfc1']:
+        name_to_id = lambda x: int(x.split("-")[0])            
+    elif dataset in ['ubfc2']:
+        name_to_id = lambda x: int(x.replace('subject',''))            
     else:
         raise NotImplementedError
     

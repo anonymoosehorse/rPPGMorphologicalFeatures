@@ -11,7 +11,7 @@ def main():
     config_path = home_path / "x_config.yaml"
     dataset_config_path = home_path / "x_dataset_config.yaml"
     
-    run_training(checkpoint_path,config_path,dataset_config_path,experiment_name=None)
+    run_training(checkpoint_path,config_path,dataset_config_path,experiment_name=None,debug_mode=False)
 
 if __name__ == "__main__":
     main()

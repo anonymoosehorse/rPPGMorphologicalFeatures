@@ -1,6 +1,9 @@
 import subprocess
 from pathlib import Path
 from tqdm import tqdm
+from omegaconf import OmegaConf
+
+from src.test_baseline import run_peakbased_detector
 
 n_folds = 7
 
@@ -10,48 +13,51 @@ data_dim_dict={
     "ibis":"3d",
 }
 
-# script_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_feature_estimation\src\lightning_main.py")
-script_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_feature_estimation\src\test_baseline.py")
+name = "BaselineAnalysisNewNormalizedDataFlip"
 
-cmd_list = []
+if __name__ == "__main__":
 
-# for dataset in ['vicar','vipl']:
-for dataset in tqdm(['vicar']):
-    for use_gt in tqdm([True,False]):
-        for network in ['peakdetection1d']:
-            for representation in ["traces"]:
-                for target in ["all"]:
-                    
-                    batch_size = 64
+    # for dataset in ['vicar','vipl']:
+    for dataset in tqdm(['vicar']):
+        for use_gt in tqdm([True,False]):
+            for network in ['peakdetection1d']:
+                for representation in ["traces"]:
+                    for target in [["HR","RT","AUP","PWA"]]:
+                        
+                        batch_size = 64
+                        
+                        epochs = 1
 
-                    ##HACK: To test if everything is running smooth just train two epochs
-                    epochs = 1
-                    
-                    cmd = [
-                        r"python",str(script_path),
-                        f"train.epochs={epochs}",
-                        f"train.batch_size={batch_size}",
-                        f"model.name={network}",
-                        f"model.data_dim={data_dim_dict[representation]}",
-                        f"model.input_representation={representation}",
-                        f"model.target={target}",
-                        f"dataset.name={dataset}",
-                        f"dataset.use_gt={use_gt}"
-                    ]
+                        cfg = OmegaConf.load("x_config.yaml")                                        
 
-                    if not use_gt:
-                        for fold_nr in range(n_folds):
-                            fold_cmd = cmd + [f"dataset.fold_number={fold_nr}"]
-                            print(fold_cmd)
-                            subprocess.run(fold_cmd)                            
+                        data_cfg = OmegaConf.load("x_dataset_config.yaml")
+                        data_cfg = data_cfg[cfg.dataset.name]
+                        
+                        cfg['train']['epochs']= epochs
+                        cfg['train']['batch_size']= batch_size
+                        cfg['model']['name']= network
+                        cfg['model']['data_dim']= data_dim_dict[representation]
+                        cfg['model']['input_representation']= representation
+                        cfg['model']['target']= target
+                        cfg['dataset']['name']= dataset
+                        cfg['dataset']['use_gt']= use_gt  
+                        cfg['dataset']['normalize_data'] = True
+                        cfg['dataset']['flip_signal'] = True
+
+                        if not use_gt:
+                            for fold_nr in range(n_folds):
+                                cfg['dataset']['fold_number']= fold_nr                            
+                                
+                                run_peakbased_detector(cfg,data_cfg,name)
+                                
+                        else:
                             
-                    else:
-                        print(cmd)
-                        subprocess.run(cmd)
+                            run_peakbased_detector(cfg,data_cfg,name)
+                            
 
-                        
+                            
 
-                        
+                            
 
 
 

@@ -20,17 +20,18 @@ def get_model(model_name: str,data_dimensions,fps,target,norm_factor = 1):
             stride=2,
             groups=1,
             n_block=10,
-            n_classes=output_dim,
+            n_classes=10,
+            n_regression_targets=output_dim,
             norm_factor=norm_factor,
             downsample_gap=2,
             increasefilter_gap=2,
             use_do=True,
             use_bn=True)
     elif model_name == 'resnet2d':
-        model = Resnet2D(data_dimensions,output_dim=output_dim)
+        model = Resnet2D(data_dimensions,num_regression_targets=output_dim,num_classes=10)
     elif model_name == 'transformer1d':
         model = TransformerModel(seq_len=300, d_model=256, nhead=4, d_hid=2048, nlayers=8,
-                                 norm_factor=norm_factor,output_dim=output_dim)
+                                 norm_factor=norm_factor,n_regression_targets=output_dim,num_classes=10)
     elif model_name == 'transformer2d':
         model = CWTNet2(model_name, data_dimensions,output_dim=output_dim)
     elif model_name == 'peakdetection1d':

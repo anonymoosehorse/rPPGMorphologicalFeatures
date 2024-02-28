@@ -10,6 +10,7 @@ test_results_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\wavefo
 test_results_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_feature_estimation\test_results\normalization_test_new")
 test_results_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_feature_estimation\test_results\normalization_test_new_shuffle")
 test_results_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_feature_estimation\test_results\flipped_multi_input_batched")
+test_results_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_feature_estimation\test_results\test_runs_new")
 
 combined_results_path = Path.cwd() / (test_results_path.stem + ".csv")
 
@@ -29,6 +30,7 @@ if not combined_results_path.exists() or redo:
                     if isinstance(v,list):
                         v = '_'.join(v)
                     df[k] = v
+        df['Experiment'] = file.parent.name
             
 
         data.append(df)

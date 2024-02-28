@@ -8,6 +8,8 @@ from torch.utils.data import Dataset
 import numpy as np
 from sklearn.preprocessing import minmax_scale
 
+from matplotlib import pyplot as plt
+
 
 from ..utils.signal_processing import pos,pos_img
 from ..constants import Normalization
@@ -58,16 +60,21 @@ class Dataset1D(Dataset):
 
             split_data = tmp_data[name]['SplitData'][split_idx_idx]
             split_time = tmp_data[name]['SplitTime'][split_idx_idx]
+
+            split_gtdata = tmp_data[name]['SplitGTData'][split_idx_idx]
+            split_gtpeaks = tmp_data[name]['SplitGTPeaks'][split_idx_idx]
+            split_gttime = tmp_data[name]['SplitGTTime'][split_idx_idx]
             
-            if self.target == 'all' or isinstance(self.target,list):
-                split_target = {}
+            split_target = {}
+            if isinstance(self.target,list):
                 for key in tmp_data[name].keys():
-                    if isinstance(self.target,list) and key not in self.target:
-                        continue
-                    if key not in ['SplitData','SplitTime','SplitIndex']:
-                        split_target[key] = tmp_data[name][key][split_idx_idx]
+                    if any([t in key for t in self.target]):
+                        split_target[key] = tmp_data[name][key][split_idx_idx]                    
+                 
             else:
-                split_target = tmp_data[name][self.target][split_idx_idx]
+
+                split_target[self.target] = tmp_data[name][self.target][split_idx_idx]
+                split_target[self.target+"_class"] = tmp_data[name][self.target+"_class"][split_idx_idx]
         
         # split_data = torch.from_numpy(split_data).to(self.device)
         split_data = torch.from_numpy(split_data)
@@ -81,20 +88,30 @@ class Dataset1D(Dataset):
 
         # split_time = torch.from_numpy(split_time).to(self.device)
         split_time = torch.from_numpy(split_time)
-        split_time = split_time.float()
+        split_time = split_time.float()       
+        
 
-        if self.target == 'all' or isinstance(self.target,list):
+        if isinstance(self.target,list):
             if self.normalize:                
-                split_target = torch.stack([torch.tensor(normalize_gt(value,key)).float() for key,value in split_target.items()])
+                split_regression_targets = torch.stack([torch.tensor(normalize_gt(split_target[key],key)).float() for key in self.target])
             else:                
-                split_target = torch.stack([torch.tensor(value).float() for key,value in split_target.items()])
+                split_regression_targets = torch.stack([torch.tensor(split_target[key]).float() for key in self.target])
+            
+            split_classification_targets = torch.stack([torch.tensor(split_target[key+"_class"]).float() for key in self.target])
+            
         else:            
-            split_target = torch.tensor(split_target)
-            split_target = split_target.float()
+            split_regression_targets = torch.tensor(split_target[self.target]).float()
+            split_classification_targets = torch.tensor(split_target[self.target+"_class"]).float()            
             if self.normalize:
-                split_target = normalize_gt(split_target,self.target)
+                split_regression_targets = normalize_gt(split_regression_targets,self.target)
 
-        return {"data":split_data,"target":split_target,"name":names,"time":split_time}
+        return {
+            "data":split_data,
+            "regression_target":split_regression_targets,
+            "classification_target":split_classification_targets,
+            "name":names,
+            "time":split_time,
+            "gt_data":np.stack([split_gttime,split_gtdata,split_gtpeaks])}
 
 
 class DatasetCWT(Dataset):

@@ -55,9 +55,26 @@ def read_csv(csv_path):
     gt_data = pd.read_csv(csv_path)
     gt_signal = gt_data['Signal'].to_numpy()
     gt_time = gt_data['Time'].to_numpy()
-    return gt_signal,gt_time
+    gt_peaks = gt_data['Peaks'].to_numpy()
+    gt_peaks[0] = 0
+    peak_idcs = gt_data.loc[gt_peaks > 0,'Peaks'].index
+    
+    valley_idcs = []
+    for i,split in enumerate(np.split(gt_signal,peak_idcs)):
+        valley_idx = np.argmin(split)  
+        if valley_idx == 0:
+            #Reverse the split to find the last valley
+            valley_idx = len(split) - np.argmin(split[::-1]) - 1 
 
-def read_pure_json(json_path,gt_fps):
+        valley_idx += peak_idcs.insert(0,0)[i]
+
+        valley_idcs.append(valley_idx)
+    gt_extrema = np.zeros_like(gt_signal)
+    gt_extrema[peak_idcs] = 1
+    gt_extrema[valley_idcs] = -1
+    return gt_signal,gt_time,gt_extrema
+
+def read_pure_json(json_path):
     with open(json_path, 'r') as f:
         data = json.load(f)
     gt_data = [data_point['Value']['waveform'] for data_point in data['/FullPackage']]
@@ -68,14 +85,18 @@ def read_pure_json(json_path,gt_fps):
 
 def read_numpy(np_path):
     gt_data = np.loadtxt(
-        np_path, delimiter=',', skiprows=1)[:, 1]
-    return gt_data
+        np_path, delimiter=',', skiprows=1)
+    gt_signal = gt_data[:, 1]
+    gt_time = gt_data[:, 0]
+    return gt_signal, gt_time
 
 def read_gt_data(gt_path,gt_fps,load_func):
     gt_lookup = {}
-    print()
-    for gt_file_path in gt_path.glob("*.*"):
-        gt_data,gt_time = load_func(gt_file_path,gt_fps)
+    
+    
+    for gt_file_path in gt_path.glob("*.*"):    
+
+        gt_data,gt_time,gt_extrema = load_func(gt_file_path)
         if gt_time is None:
             gt_t = 1000 / gt_fps
             gt_time = [i * gt_t for i in range(len(gt_data))]
@@ -84,11 +105,13 @@ def read_gt_data(gt_path,gt_fps,load_func):
                 print(f"\r Assuming time is in seconds correcting to milliseconds for file {gt_file_path.stem}",end=" ")
                 gt_time = gt_time * 1000
 
+        # print(f"{gt_file_path.name} | Difference between given and calculated fps {gt_fps}  {1000 / np.diff(gt_time).mean()} \t")
         if not np_between(np.diff(gt_time).max(),(1000 / gt_fps) - 5,(1000 / gt_fps) + 5):
             gt_time,gt_data = resample_signal(gt_time,gt_data)            
             print(f"\r Resampled {gt_file_path.name} | Difference between given and new fps {gt_fps -  1000 / np.diff(gt_time).mean()} \t",end=" ")
 
-        gt_lookup[gt_file_path.stem] = np.array([gt_time,gt_data])
+        gt_lookup[gt_file_path.stem] = np.array([gt_time,gt_data,gt_extrema])
+        
     return gt_lookup
 
 def linear_resample(signals,source_fps,new_fps):
@@ -103,14 +126,36 @@ def resample_data(signal_dict,source_fps,new_fps=30):
         resampled_dict[key] = linear_resample(value,source_fps,new_fps)
     return resampled_dict
 
-def detect_extrema_to_dict(signal_dict):
+def detect_extrema_to_dict(signal_dict,gt_fps,window_time_s=10):
     extrema_dict = {}
     for key,value in signal_dict.items():
         sig = value[1,:]
         if np.isnan(sig).any():
             print(f"\r Found NaN values in {key}",end=" ")
+
+        window_size = (window_time_s*gt_fps)
+        step_size = round(window_size/4)
+
             
         peak_idcs,valley_idcs = detect_peaks(sig,0.3)
+
+        # hrs = 60 / (np.diff(peak_idcs) / gt_fps)
+
+        # print(f"\r Found HR for {key} with mean {hrs.mean()} and std {hrs.std()}")
+
+        # if hrs.mean() < 45 or hrs.std() > 20:
+        #     print(f"Found incorrect HR attempting to correct for {key}")
+        #     idcs = [np.array(extrema) + i*step_size for i,win in enumerate(np.lib.stride_tricks.sliding_window_view(sig,window_size)[::step_size]) for extrema in detect_peaks(win,0.5)]
+        #     p_nodes,p_counts = np.unique(np.concatenate(idcs[::2]),return_counts=True)
+        #     peak_idcs = p_nodes[np.logical_or.reduce((p_counts > 2,p_nodes < 3*step_size,p_nodes > (len(sig) - 3*step_size)))]
+        #     # peak_idcs = p_nodes
+        #     v_nodes,v_counts = np.unique(np.concatenate(idcs[1::2]),return_counts=True)
+        #     valley_idcs = v_nodes[np.logical_or.reduce((v_counts > 2,v_nodes < 3*step_size,v_nodes > (len(sig) - 3*step_size)))]
+        #     # valley_idcs = v_nodes
+        #     hrs = 60 / (np.diff(peak_idcs) / gt_fps)
+        #     print(f"\r After correction HR for {key} with mean {hrs.mean()} and std {hrs.std()}")
+
+
         extrema_dict[key] = {}
         extrema_dict[key]['peaks'] = peak_idcs
         extrema_dict[key]['valleys'] = valley_idcs
@@ -184,12 +229,11 @@ def create_splits(signal_dict,gt_dict,extrema_dict,fps,gt_fps,window_time_s=10):
         gt_time = gt_dict[name][0,:]        
         gt_sig = gt_dict[name][1,:]
 
-        gt_peaks = np.zeros_like(gt_sig)
-        gt_peaks[extrema_dict[name]['peaks']] = 1
-        gt_peaks[extrema_dict[name]['valleys']] = -1
+        gt_peaks = gt_dict[name][2,:]
+        
 
-        peak_idcs = np.array(extrema_dict[name]['peaks'])
-        valley_idcs = np.array(extrema_dict[name]['valleys'])
+        peak_idcs = np.where(gt_peaks > 0)[0]#np.array(extrema_dict[name]['peaks'])
+        valley_idcs = np.where(gt_peaks < 0)[0]#np.array(extrema_dict[name]['valleys'])
 
         avg_properties = {"SplitIndex":[],"RT":[],"PWA":[],"AUP":[],"HR":[]}
         for i in range(1,len(split_indices)):
@@ -216,6 +260,8 @@ def create_splits(signal_dict,gt_dict,extrema_dict,fps,gt_fps,window_time_s=10):
         avg_properties['SplitData'] = np.split(signal, split_indices)[1:-1]
         avg_properties['SplitTime'] = np.split(time, split_indices)[1:-1]
 
+        gt_split_indices = gt_split_indices[gt_split_indices <= len(gt_sig)]
+
         avg_properties['SplitGTData'] = np.split(gt_dict[name][1], gt_split_indices)[1:-1]
         avg_properties['SplitGTTime'] = np.split(gt_dict[name][0], gt_split_indices)[1:-1]
 
@@ -224,24 +270,34 @@ def create_splits(signal_dict,gt_dict,extrema_dict,fps,gt_fps,window_time_s=10):
         matched_splits[name] = avg_properties
         
     return matched_splits
+
+def test_split(data,idx,name):
+        remove = False
+        if np.isnan(data['HR'][idx]):
+            print(f"Removed Window {idx} of Video {name} due to missing values")
+            remove = True
+        elif not np_between(data['HR'][idx],25,240):
+            print(f"Removed Window {idx} of Video {name} due to incorrect HR")
+            remove = True
+        elif not np_between(data['RT'][idx],50,1000):                
+            print(f"Removed Window {idx} of Video {name} due to incorrect RT")
+            remove = True
+
+        return remove
+
     
 def remove_faulty_splits(splits):    
     for name,data in splits.items():        
         for idx in sorted(data['SplitIndex'],reverse=True):
-            remove = False
-            if np.isnan(data['HR'][idx]):
-                print(f"Removed Window {idx} of Video {name} due to missing values")
-                remove = True
-            elif not np_between(data['HR'][idx],25,240):
-                print(f"Removed Window {idx} of Video {name} due to incorrect HR")
-                remove = True
-            elif not np_between(data['RT'][idx],50,1000):                
-                print(f"Removed Window {idx} of Video {name} due to incorrect RT")
-                remove = True
+
+            remove = test_split(data,idx,name)
 
             if remove:
+
                 for key in data.keys():
-                    data[key].pop(idx)
+                    if len(data[key]) > idx:
+                        data[key].pop(idx)
+                    
     return splits
 
 

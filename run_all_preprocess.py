@@ -1,18 +1,27 @@
 import subprocess
 from pathlib import Path
+from omegaconf import OmegaConf
 
-script_path = Path(r"D:\Projects\Waveform\Code\AlternativeRubenCode\waveform_feature_estimation\src\preprocess.py")
+from src.preprocess import run_preprocessing
 
-for dataset in ['ucla']:#['vipl','vicar','ubfc1','ubfc2','pure']:
-    for use_gt in [True,False]: #['False']:#[True,False]:                    
-        cmd = [
-            r"python",str(script_path),
-            f"dataset_to_run={dataset}",
-            f"use_gt={use_gt}",
-            f"normalize_gt=False",
-            f"output_directory=TrainingData"
-        ]
+cfg = OmegaConf.load('x_preprocess_config.yaml')     
+cmd_cfg = OmegaConf.from_cli()
+cfg = OmegaConf.merge(cfg, cmd_cfg)
 
+for dataset in ['pure','ucla','vipl']: #['vicar','vipl','ubfc1','ubfc2','ucla','pure']:
+    for normalize in [True,False]:
+        for use_gt in [True,False]: #['False']:#[True,False]:        
+            name = "TrainingData"
+            if normalize:
+                name += "Normalized"            
+            
+            cfg['dataset_to_run']=dataset
+            cfg['use_gt']=use_gt
+            cfg['normalize']=normalize
+            cfg['output_directory']=name
+            
+            data_cfg = OmegaConf.load('x_dataset_config.yaml')
+            data_cfg = data_cfg[cfg.dataset_to_run]            
+            
+            run_preprocessing(cfg,data_cfg)
 
-        print(cmd)
-        subprocess.run(cmd)

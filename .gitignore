@@ -1,6 +1,7 @@
 /VIPL-HR - original/data/
 /venv/
 /OutputFolder
+/Baseline*
 /lightning_logs
 /csv_logs
 /model_checkpoints

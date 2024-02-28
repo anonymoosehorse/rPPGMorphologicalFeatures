@@ -32,15 +32,11 @@ def run_test(cfg_path: str):
     data_cfg = OmegaConf.load("x_dataset_config.yaml")
     data_cfg = data_cfg[cfg.dataset.name]
 
-    device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
-    print(f"Using device: {device}")    
-
     # Seed everything. Note that this does not make training entirely
     # deterministic.
     pl.seed_everything(cfg.seed, workers=True)    
 
-    model = get_model(cfg.model.name,cfg.model.data_dim,data_cfg.traces_fps,list(cfg.model.target))
-    model = model.to(device)
+    model = get_model(cfg.model.name,cfg.model.data_dim,data_cfg.traces_fps,list(cfg.model.target) if isinstance(cfg.model.target,ListConfig) else cfg.model.target)
     
     runner = Runner(cfg, model)
     
@@ -65,19 +61,17 @@ def run_test(cfg_path: str):
     # train_loader,test_loader,val_loader = get_dataloaders(cfg,device)
 
     train_loader,test_loader,val_loader = get_dataloaders(data_path=data_path,
-                                                          target=list(cfg.model.target),
+                                                          target=list(cfg.model.target) if isinstance(cfg.model.target,ListConfig) else cfg.model.target,
                                                           input_representation=cfg.model.input_representation,
                                                           test_ids=test_ids,
-                                                          val_ids=val_ids,
-                                                          device=device,
+                                                          val_ids=val_ids,                                                          
                                                           name_to_id_func=get_name_to_id_func(cfg.dataset.name),
                                                           normalize_data=cfg.dataset.normalize_data,
                                                           flip_signal=cfg.dataset.flip_signal,
                                                           **loader_settings)
         
     ## Load model with the lowest validation score
-    checkpoint_path = list(cfg_path.glob('*.ckpt'))[0]
-        
+    checkpoint_path = list(cfg_path.glob('*.ckpt'))[0]        
 
     # Test (if test dataset is implemented)
     if val_loader is not None:        

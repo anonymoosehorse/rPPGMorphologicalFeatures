@@ -199,7 +199,7 @@ class ResNet1D(nn.Module):
 
     """
 
-    def __init__(self, in_channels, base_filters, kernel_size, stride, groups, n_block, n_classes, norm_factor, downsample_gap=2,
+    def __init__(self, in_channels, base_filters, kernel_size, stride, groups, n_block, n_classes,n_regression_targets, norm_factor, downsample_gap=2,
                  increasefilter_gap=4, use_bn=True, use_do=True, verbose=False):
         super(ResNet1D, self).__init__()
 
@@ -264,8 +264,9 @@ class ResNet1D(nn.Module):
         self.final_bn = nn.BatchNorm1d(out_channels)
         self.final_relu = nn.ReLU(inplace=True)
         # self.do = nn.Dropout(p=0.5)
-        self.dense = nn.Linear(out_channels, n_classes)
-        # self.softmax = nn.Softmax(dim=1)
+        self.dense = nn.Linear(out_channels, n_regression_targets)
+        self.dense_cls = nn.Linear(out_channels, n_classes)
+        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
         # x = x[:,1,:].unsqueeze(1)        
@@ -302,16 +303,17 @@ class ResNet1D(nn.Module):
         if self.verbose:
             print('final pooling', out.shape)
         # out = self.do(out)
-        out = self.dense(out)
+        out_reg = self.dense(out)
         if self.verbose:
             print('dense', out.shape)
-        # out = self.softmax(out)
+        out_cls = self.dense_cls(out)
+        out_cls = self.softmax(out_cls)
         if self.verbose:
             print('softmax', out.shape)
 
-        out *= self.norm_factor
+        #out *= self.norm_factor
 
-        return out
+        return out_reg,out_cls
 
 if __name__ == '__main__':
     kernel_size = 16

@@ -12,7 +12,7 @@ from torch.utils.data import dataset
 class TransformerModel(nn.Module):
 
     def __init__(self, seq_len: int, d_model: int, nhead: int, d_hid: int,
-                 nlayers: int, norm_factor, dropout: float = 0.1, output_dim: int = 1):
+                 nlayers: int, norm_factor, dropout: float = 0.1, n_regression_targets: int = 1,num_classes: int = 10):
         super().__init__()
         self.norm_factor = norm_factor
 
@@ -24,14 +24,16 @@ class TransformerModel(nn.Module):
         # self.ntoken = ntoken
         self.seq_len = seq_len
 
-        self.device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
-        self.pos = torch.unsqueeze(torch.tensor(np.linspace(0, 1, seq_len)), 0).to(self.device)
+        # self.device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+        # self.pos = torch.unsqueeze(torch.tensor(np.linspace(0, 1, seq_len)), 0).to(self.device)
 
         # self.encoder = nn.Embedding(ntoken, d_model)
         # self.d_model = d_model
 
         # self.decoder = nn.Linear(seq_len, 64)
-        self.decoder = nn.Linear(seq_len, output_dim)
+        self.decoder = nn.Linear(seq_len, n_regression_targets)
+        self.decoder_cls = nn.Linear(seq_len, num_classes)
+        self.softmax = nn.Softmax(dim=1)
         self.dropout = nn.Dropout(dropout)
         self.avg_pool = nn.AdaptiveAvgPool1d(1)
         # self.self_attn_pool = SelfAttentionPooling(d_model)
@@ -104,9 +106,12 @@ class TransformerModel(nn.Module):
         # Use 2-layer FC network to predict the output
         # x = self.dropout(F.relu(self.decoder(x)))
         # print(x.shape)
-        x = self.decoder(x)
+        x_reg = self.decoder(x)
+        x_cls = self.decoder_cls(x)
+        x_cls = self.softmax(x_cls)
+
         # x *= self.norm_factor
-        return x
+        return x_reg,x_cls
 
 
 class SelfAttentionPooling(nn.Module):

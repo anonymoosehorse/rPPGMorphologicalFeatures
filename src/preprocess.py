@@ -1,20 +1,22 @@
 from pathlib import Path
+
 from omegaconf import OmegaConf
 import h5py
 import numpy as np
-from utils.pre_processing import read_and_process,resample_data,read_h5,read_numpy,read_gt_data,detect_extrema_to_dict,create_splits,remove_faulty_splits,create_cwt,read_csv,read_pure_json
-from constants import Normalization
 from sklearn.preprocessing import minmax_scale
 import pandas as pd
+
+from .utils.pre_processing import read_and_process,resample_data,read_h5,read_numpy,read_gt_data,detect_extrema_to_dict,create_splits,remove_faulty_splits,create_cwt,read_csv,read_pure_json
+from .constants import Normalization
 
 def scale_to_range(value,old_min,old_max,new_min=0,new_max=1):
     return ((new_max - new_min)*(value-old_min)/(old_max-old_min)) + new_min
 
 def load_gt_dict(gt_path,gt_fps,dataset):
     if dataset == "vicar":
-        load_func = read_h5        
+        load_func = read_csv        
     elif dataset == "vipl":
-        load_func = read_numpy    
+        load_func = read_csv    
     elif dataset == "ubfc1":
         load_func = read_csv
     elif dataset == "ubfc2":
@@ -22,7 +24,7 @@ def load_gt_dict(gt_path,gt_fps,dataset):
     elif dataset == "ucla":
         load_func = read_csv
     elif dataset == "pure":
-        load_func = read_pure_json
+        load_func = read_csv
     
     gt_sig_dict = read_gt_data(gt_path,gt_fps,load_func)    
 
@@ -40,6 +42,23 @@ def normalize_gt_dict(gt_sig_dict,dataset):
         gt_sig_dict[key][1] = scale_to_range(value[1],range_dict['min'],range_dict['max'])
 
     return gt_sig_dict
+
+def normalize_dict(sig_dict,is_gt):
+    all_sig = np.array([item for key,sig in sig_dict.items() for item in sig[1,:]])
+
+    if not is_gt:
+        std = np.std(all_sig)
+        mean = np.mean(all_sig)
+        lb = mean - 3*std
+        ub = mean + 3*std
+    else:
+        lb = np.min(all_sig)
+        ub = np.max(all_sig)
+
+    for key,value in sig_dict.items():
+        sig_dict[key][1] = scale_to_range(value[1],lb,ub)
+
+    return sig_dict
 
 def normalize_signal_dict(gt_sig_dict,dataset):
 
@@ -79,15 +98,7 @@ def generate_balanced_classes(splits,num_classes=10):
         
     return splits
 
-
-if __name__ == '__main__':
-    cfg = OmegaConf.load('x_preprocess_config.yaml')     
-    cmd_cfg = OmegaConf.from_cli()
-    cfg = OmegaConf.merge(cfg, cmd_cfg)
-
-    data_cfg = OmegaConf.load('x_dataset_config.yaml')
-    data_cfg = data_cfg[cfg.dataset_to_run]
-
+def run_preprocessing(cfg:OmegaConf,data_cfg:OmegaConf):
     traces_path = Path(data_cfg.traces_path)
     fps = data_cfg.traces_fps
 
@@ -106,7 +117,8 @@ if __name__ == '__main__':
     if not use_gt:
         signal_dict =  read_and_process(traces_path,fps)    
         if cfg.normalize:
-            signal_dict = normalize_signal_dict(signal_dict,dataset)        
+            signal_dict = normalize_dict(signal_dict,is_gt=False)
+            # signal_dict = normalize_signal_dict(signal_dict,dataset)        
         
         if fps != 30:
             signal_dict = resample_data(signal_dict,fps,30)
@@ -117,7 +129,7 @@ if __name__ == '__main__':
     gt_sig_dict = load_gt_dict(gt_path,gt_fps,dataset)
     
     if cfg.normalize:
-        gt_sig_dict = normalize_gt_dict(gt_sig_dict,dataset)
+        gt_sig_dict = normalize_dict(gt_sig_dict,is_gt=True)
 
     if use_gt:
         signal_dict = resample_data(gt_sig_dict,gt_fps,30)
@@ -126,7 +138,7 @@ if __name__ == '__main__':
     
     print("Split data, calculate features and clean ...", end=" ")
 
-    extrema_dict = detect_extrema_to_dict(gt_sig_dict)
+    extrema_dict = detect_extrema_to_dict(gt_sig_dict,gt_fps)
     
     splits = create_splits(signal_dict,gt_sig_dict,extrema_dict,fps=fps,gt_fps=gt_fps)
 
@@ -172,3 +184,8 @@ if __name__ == '__main__':
     print("Done")
    
     
+
+
+# if __name__ == '__main__':
+    
+
