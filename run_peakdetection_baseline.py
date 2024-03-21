@@ -13,12 +13,13 @@ data_dim_dict={
     "ibis":"3d",
 }
 
-name = "BaselineAnalysisNewNormalizedDataFlip"
+# name = "BaselineAnalysisNewNormalizedDataFlip"
+name = "BaselineAnalysisNewNormalizedData"
 
 if __name__ == "__main__":
 
     # for dataset in ['vicar','vipl']:
-    for dataset in tqdm(['vicar']):
+    for dataset in tqdm(['pure']):
         for use_gt in tqdm([True,False]):
             for network in ['peakdetection1d']:
                 for representation in ["traces"]:
@@ -42,7 +43,7 @@ if __name__ == "__main__":
                         cfg['dataset']['name']= dataset
                         cfg['dataset']['use_gt']= use_gt  
                         cfg['dataset']['normalize_data'] = True
-                        cfg['dataset']['flip_signal'] = True
+                        cfg['dataset']['flip_signal'] = False
 
                         if not use_gt:
                             for fold_nr in range(n_folds):

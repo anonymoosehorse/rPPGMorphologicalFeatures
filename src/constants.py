@@ -108,10 +108,22 @@ class DataFolds(object):
 
 class DataFoldsNew(object):
         
-    VICAR_GT_FOLDS = [[[6, 8], [1, 10]]]    
+    VICAR_GT_FOLDS = [[[6, 8], [1, 10]]]   
+
+    UCLA_GT_FOLDS = [[[8, 84], [92, 74]]] 
     
     VIPL_GT_FOLDS = [[[19, 62, 86, 67, 37, 77, 40, 7, 36, 100, 83, 89, 6, 45, 32, 22],
                         [33, 97, 98, 69, 71, 103, 9, 59, 43, 12, 104, 50, 88, 90, 27, 61]]]    
+    
+    PURE_GT_FOLDS = [[[7, 6], [4, 8]]]
+    
+    PURE_FOLDS = [[[1], [9]],
+                    [[2], [8]],
+                    [[3], [7]],
+                    [[4], [6]],
+                    [[5], [4]],
+                    [[6], [5]],
+                    [[7], [3]]]
     
     VICAR_FOLDS = [[[3], [16]],
                         [[9], [7]],
@@ -120,6 +132,14 @@ class DataFoldsNew(object):
                         [[8], [13]],
                         [[11], [1]],
                         [[4], [6]]]
+
+    UCLA_FOLDS = [[[25], [88]],
+                    [[12], [69]],
+                    [[56], [63]],
+                    [[66], [24]],
+                    [[14], [49]],
+                    [[85], [18]],
+                    [[26], [72]]]
             
     VIPL_FOLDS = [[[22, 29, 84, 93, 99, 94, 25], [67, 72, 20, 4, 48, 70, 69]],
                 [[66, 73, 51, 54, 15, 97, 83], [95, 55, 27, 58, 14, 37, 52]],
@@ -145,6 +165,16 @@ class DataFoldsNew(object):
                 return self.VIPL_GT_FOLDS[fold_nr]
             else:
                 return self.VIPL_FOLDS[fold_nr]
+        elif self.dataset == 'ucla':
+            if self.use_gt:
+                return self.UCLA_GT_FOLDS[fold_nr]
+            else:
+                return self.UCLA_FOLDS[fold_nr]
+        elif self.dataset == 'pure':
+            if self.use_gt:
+                return self.PURE_GT_FOLDS[fold_nr]
+            else:
+                return self.PURE_FOLDS[fold_nr]
             
 
 class DataFolds(object):

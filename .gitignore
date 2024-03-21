@@ -6,8 +6,9 @@
 /csv_logs
 /model_checkpoints
 /cwt-net/
+/ResultCSV
+/IBIS_data
 _junkyard/
-test_*
 *.png
 *.xml
 *.pdf
@@ -20,6 +21,7 @@ test_*
 x_*
 *.out
 *.slurm
+*.zip
 
 
 

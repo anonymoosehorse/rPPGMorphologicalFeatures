@@ -107,7 +107,7 @@ class TransformerModel(nn.Module):
         # x = self.dropout(F.relu(self.decoder(x)))
         # print(x.shape)
         x_reg = self.decoder(x)
-        x_cls = self.decoder_cls(x)
+        x_cls = self.decoder_cls(x).flatten(1)
         x_cls = self.softmax(x_cls)
 
         # x *= self.norm_factor

@@ -56,18 +56,11 @@ def initialize_callbacks(cfg,checkpoint_dir):
 
     return training_callbacks
 
-def run_training(checkpoint_dir,config_path,dataset_config_path,experiment_name=None,debug_mode=False):
-    # Load defaults and overwrite by command-line arguments
-    cfg = OmegaConf.load(config_path)
-    cmd_cfg = OmegaConf.from_cli()
-    cfg = OmegaConf.merge(cfg, cmd_cfg)
+def run_training(checkpoint_dir,cfg,data_cfg,experiment_name=None,debug_mode=False):
 
-    data_cfg = OmegaConf.load("x_dataset_config.yaml")
-    data_cfg = data_cfg[cfg.dataset.name]
-
-    # if config_exists_in_project(cfg):
-    #     print("This analysis has already been done exiting")
-    #     exit()
+    if config_exists_in_project(cfg):
+        print("This analysis has already been done exiting")
+        return
     
     print("Training Configuration")
     print(OmegaConf.to_yaml(cfg))
@@ -114,7 +107,8 @@ def run_training(checkpoint_dir,config_path,dataset_config_path,experiment_name=
         logger=loggers,                       
         accelerator='auto' if not debug_mode else 'cpu',
         callbacks=training_callbacks,
-        log_every_n_steps=2
+        log_every_n_steps=2,
+        deterministic=True
     )
     
     # data = get_data(cfg.dataset.root,cfg.dataset.name,cfg.model.input_representation,cfg.dataset.use_gt)    
