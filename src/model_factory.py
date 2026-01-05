@@ -4,7 +4,7 @@
 # from models.resnet2d import Resnet2D
 from omegaconf import ListConfig
 
-from .models import CWTNet2,TransformerModel,ResNet1D,Resnet2D,PeakbasedDetector
+from .models import CWTNet2,TransformerModel,ResNet1D,Resnet2D,PeakbasedDetector,TransformerModel
 
 def get_model(model_name: str,data_dimensions,fps,target,norm_factor = 1):
 
@@ -30,10 +30,10 @@ def get_model(model_name: str,data_dimensions,fps,target,norm_factor = 1):
     elif model_name == 'resnet2d':
         model = Resnet2D(data_dimensions,num_regression_targets=output_dim,num_classes=10)
     elif model_name == 'transformer1d':
-        model = TransformerModel(seq_len=300, d_model=256, nhead=4, d_hid=2048, nlayers=8,
-                                 norm_factor=norm_factor,n_regression_targets=output_dim,num_classes=10)
+        model = TransformerModel(seq_len=300, d_model=256, nhead=4, d_hid=2048, nlayers=8,norm_factor=norm_factor,
+                                 n_regression_targets=output_dim,num_classes=10)
     elif model_name == 'transformer2d':
-        model = CWTNet2(model_name, data_dimensions,output_dim=output_dim)
+        model = CWTNet2(model_name,data_dimensions, n_regression_targets=output_dim,num_classes=10)
     elif model_name == 'peakdetection1d':
         model = PeakbasedDetector(target,fps)
     else:

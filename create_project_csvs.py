@@ -45,7 +45,7 @@ def create_project_csvs(checkpoint_dir:Path,combined_results_path:Path,SKIP_EXIS
                         df[k] = v
             df['Experiment'] = file.parent.name
             
-        data.append(df)
+            data.append(df)
         data = pd.concat(data)
 
         data.to_csv(project_csv_file_path,index=False)

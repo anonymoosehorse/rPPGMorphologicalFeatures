@@ -34,6 +34,7 @@ class PeakbasedDetector(nn.Module):
 
             res = get_wave_properties_torch(sig,time,peak_idcs,valley_idcs,self.signal_fps)
             
+            
             if isinstance(self.target_name,list):
                 res_dict = {key:torch.mean(torch.tensor(res[key])) for key in self.target_name}
                 res_list.append(res_dict)

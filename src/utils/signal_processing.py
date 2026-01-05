@@ -22,10 +22,10 @@ def pos_img(mat,axis=0,time_dim=0):
 
     return z_mat
 
-def fir_bp_filter(sig,fs,order,cutoffs=[0.5,6]):
+def fir_bp_filter(sig,fs,order,cutoffs=[0.5,6],axis=0):
     bands = np.array([0,cutoffs[0]-0.2,cutoffs[0],cutoffs[1],cutoffs[1]+0.2,0.5*fs]) / (0.5*fs)
     firls_coeff = firls(order,bands,[0,0,1,1,0,0])
-    return filtfilt(firls_coeff,1,sig)
+    return filtfilt(firls_coeff,1,sig,axis=axis)
 
 def pos(r, g, b):
     tn_r = temp_normalize(r)
@@ -50,12 +50,12 @@ def temp_normalize(signal):
     return signal / (mean - 1)
 
 
-def butter_lowpass_filter(data, fs, order,cutoffs=[0.5,6]):
+def butter_lowpass_filter(data, fs, order,cutoffs=[0.5,6],axis=0):
     nyq = 0.5 * fs
     # Get the filter coefficients
     # b, a = butter(order, normal_cutoff, btype='low', analog=False)
     b, a = butter(order, (cutoffs[0] / nyq, cutoffs[1]/ nyq), btype='bandpass', analog=False)
-    y = filtfilt(b, a, data)
+    y = filtfilt(b, a, data, axis=axis)
 
     return y
 
@@ -151,8 +151,6 @@ def detect_peaks_torch(sig, peak_delta):
     return torch.tensor(peaks).to(sig.device), torch.tensor(valleys).to(sig.device)
 
 def signal_to_cwt(time_s, signal,output_size=256):
-    
-    
 
     # COMPUTE SCALES
     sc_min = -1

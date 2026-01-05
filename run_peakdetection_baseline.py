@@ -15,12 +15,13 @@ data_dim_dict={
 
 # name = "BaselineAnalysisNewNormalizedDataFlip"
 name = "BaselineAnalysisNewNormalizedData"
+# name = "BaselineAnalysisNewData"
 
 if __name__ == "__main__":
 
     # for dataset in ['vicar','vipl']:
-    for dataset in tqdm(['pure']):
-        for use_gt in tqdm([True,False]):
+    for dataset in tqdm(['pure','vicar','vipl','ucla']):
+        for use_gt in tqdm([True, False]):
             for network in ['peakdetection1d']:
                 for representation in ["traces"]:
                     for target in [["HR","RT","AUP","PWA"]]:

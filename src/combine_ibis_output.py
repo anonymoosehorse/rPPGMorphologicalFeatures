@@ -73,9 +73,9 @@ def main():
 
     parser = argparse.ArgumentParser("IBIS data cleaner")
     parser.add_argument('-v', '--verbose', action='store_true', help="verbose mode on")
-    parser.add_argument('--dataset', type=str, default='vicar',choice=('vicar','vipl'), help='Dataset to use (vicar or vipl)')
+    parser.add_argument('--dataset', type=str, default='vicar', help='Dataset to use (vicar or vipl)')
     parser.add_argument('--ibis-datapath', type=str, required=True, help="choose the path to ibis data")
-    parser.add_argument('--check-validity', action='store_true', required=True, help="choose the path to ibis data")
+    parser.add_argument('--check-validity', action='store_true', required=False, help="choose the path to ibis data")
     
     # Parse given arguments
     args = parser.parse_args()
@@ -106,7 +106,7 @@ def main():
 
     #### Create hdf file
 
-    h5_outfile = Path.cwd() / f"{args.dataset_name}_ibis_combined.h5"
+    h5_outfile = Path.cwd() / f"{args.dataset}_ibis_combined.h5"
     if h5_outfile.exists():    
         hf = h5py.File(h5_outfile,'a')
     else:
@@ -120,7 +120,7 @@ def main():
     if args.verbose:
         print("Combining in hdf file")
 
-    for out_folder_path in tqdm(ibis_data_path.rglob("*" + data_cfg.video_suffix)):        
+    for out_folder_path in tqdm(list(ibis_data_path.rglob("*" + data_cfg.video_suffix))):        
 
         name = out_folder_path.stem
         

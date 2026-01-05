@@ -9,7 +9,7 @@ import torch
 import pandas as pd
 from scipy.interpolate import interp1d
 
-from .signal_processing import pos,butter_lowpass_filter,detect_peaks,signal_to_cwt
+from .signal_processing import pos,butter_lowpass_filter,detect_peaks,signal_to_cwt,fir_bp_filter
 
 
 def scale_to_range(value,old_min,old_max,new_min=0,new_max=1):
@@ -34,7 +34,8 @@ def get_data_from_json(json_path):
 def pos_and_filter(r,g,b,fps):
     pos_signal = pos(r, g, b)
     np.nan_to_num(pos_signal, copy=False)
-    pos_signal = butter_lowpass_filter(pos_signal, fps, 2,[0.5,6])
+    # pos_signal = butter_lowpass_filter(pos_signal, fps, 2,[0.5,6])
+    pos_signal = fir_bp_filter(pos_signal,fps,order=51,cutoffs=[0.5,6])
     return pos_signal
 
 def read_and_process(traces_path,fps):
@@ -222,15 +223,19 @@ def create_splits(signal_dict,gt_dict,extrema_dict,fps,gt_fps,window_time_s=10):
         if name not in gt_dict:
             print(f"Skipping {name} as no Ground Truth could be found")
             continue
-        
-        split_indices = np.arange(0, len(signal), window_time_s*fps)
-        gt_split_indices = gt_split_indices = ((split_indices / fps) * gt_fps).astype(int)
-        
+
         gt_time = gt_dict[name][0,:]        
         gt_sig = gt_dict[name][1,:]
 
         gt_peaks = gt_dict[name][2,:]
         
+        
+        split_indices = np.arange(0, len(signal), window_time_s*fps)
+        # gt_split_indices = ((split_indices / fps) * gt_fps).astype(int)
+        gt_split_indices = np.arange(0, len(gt_sig), window_time_s*gt_fps)
+        min_amount_splits = min(len(split_indices),len(gt_split_indices))
+        split_indices = split_indices[:min_amount_splits]
+        gt_split_indices = gt_split_indices[:min_amount_splits]
 
         peak_idcs = np.where(gt_peaks > 0)[0]#np.array(extrema_dict[name]['peaks'])
         valley_idcs = np.where(gt_peaks < 0)[0]#np.array(extrema_dict[name]['valleys'])
@@ -260,10 +265,10 @@ def create_splits(signal_dict,gt_dict,extrema_dict,fps,gt_fps,window_time_s=10):
         avg_properties['SplitData'] = np.split(signal, split_indices)[1:-1]
         avg_properties['SplitTime'] = np.split(time, split_indices)[1:-1]
 
-        gt_split_indices = gt_split_indices[gt_split_indices <= len(gt_sig)]
+        # gt_split_indices = gt_split_indices[gt_split_indices <= len(gt_sig)]
 
-        avg_properties['SplitGTData'] = np.split(gt_dict[name][1], gt_split_indices)[1:-1]
-        avg_properties['SplitGTTime'] = np.split(gt_dict[name][0], gt_split_indices)[1:-1]
+        avg_properties['SplitGTData'] = np.split(gt_sig, gt_split_indices)[1:-1]
+        avg_properties['SplitGTTime'] = np.split(gt_time, gt_split_indices)[1:-1]
 
         avg_properties['SplitGTPeaks'] = np.split(gt_peaks, gt_split_indices)[1:-1]        
 

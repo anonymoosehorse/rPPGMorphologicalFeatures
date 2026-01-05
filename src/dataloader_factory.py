@@ -44,7 +44,7 @@ def get_dataloaders(
     dl_test = dataset_class(data_path,target,test_names,normalize_data,flip_signal)
     dl_val = dataset_class(data_path,target,val_names,normalize_data,flip_signal)
 
-    print(f"Trainset: {len(dl_train)}, Testset: {len(dl_test)}, Trainset: {len(dl_val)}")
+    print(f"Trainset: {len(dl_train)}, Testset: {len(dl_test)}, Valset: {len(dl_val)}")
 
     train_loader = DataLoader(
         dataset=dl_train,

@@ -14,13 +14,22 @@
             "args":["vicar", "transformer1d", "1d", "area", "True", "2", "0"]
         },
         {
+            "name": "Python: Run ibis",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args":["--dataset=ucla", "--ibis-datapath=E:\\UniversityBackup\\Waveform\\Data\\IBIS\\UCLA-rPPG", "--check-validity"]
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true
-        }
+        },
         {
             "name": "Python: IBIS test",
             "type": "python",
@@ -29,7 +38,7 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args":["--dataset=ubfc2","--ibis-path=D:\\Projects\\Waveform\\Experiments\\IBIS_temporal\\build\\UBFC-RPPG-2_All_IBIS_data.h5" ]
-        }
+        },
         {
             "name": "Python: IBIS preprocess",
             "type": "python",
